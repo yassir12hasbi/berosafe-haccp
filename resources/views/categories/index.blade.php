@@ -3,10 +3,13 @@
 @section('content')
     <div class="px-4 sm:px-6 lg:px-8">
         <div class="sm:flex sm:items-center">
-            <div class="sm:flex-auto">
-                <h1 class="text-base font-semibold leading-6 text-gray-900">Catégories</h1>
-                <p class="mt-2 text-sm text-gray-700">Liste de toutes les catégories de produits.</p>
-            </div>
+           <div class="sm:flex-auto">
+            <h1 class="text-2xl font-bold mb-4">
+                <i class="fas fa-layer-group mr-2 text-gray-700"></i>
+                Catégories
+            </h1>
+         <p class="mt-2 text-sm text-gray-700">Liste de toutes les catégories de produits.</p>
+        </div>
             <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
                 <a href="{{ route('categories.create') }}" class="block rounded-md bg-brand-green px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-brand-green/500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green transition-colors">
                     Ajouter une catégorie

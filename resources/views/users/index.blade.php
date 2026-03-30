@@ -18,7 +18,30 @@
                 </a>
             </div>
         </div>
+        {{-- FILTRE --}}
+<div class="mt-6 mb-4">
+    <form method="GET" action="{{ route('users.index') }}" class="flex gap-4 items-center">
 
+        <select name="establishment_id" class="border rounded-md px-3 py-2">
+            <option value="">-- Tous les établissements --</option>
+            @foreach($establishments as $est)
+                <option value="{{ $est->id }}" 
+                    {{ request('establishment_id') == $est->id ? 'selected' : '' }}>
+                    {{ $est->name }}
+                </option>
+            @endforeach
+        </select>
+
+        <button type="submit" class="bg-brand-green text-white px-4 py-2 rounded-md">
+            Filtrer
+        </button>
+
+        <a href="{{ route('users.index') }}" class="text-gray-600 underline">
+            Reset
+        </a>
+
+    </form>
+</div>
         {{-- Le tableau des données --}}
         <div class="mt-8 flow-root">
             <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">

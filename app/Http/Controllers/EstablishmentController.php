@@ -4,16 +4,32 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Establishment;
-
+use App\Models\User;
 class EstablishmentController extends Controller
 {
 
     // ✅ LISTE
-    public function index()
-    {
-        $establishments = Establishment::all();
-        return view('establishments.index', compact('establishments'));
+    public function index(Request $request)
+{
+    $query = Establishment::query();
+
+    // 🔍 Filtre par nom
+    if ($request->name) {
+        $query->where('name', 'LIKE', '%' . $request->name . '%');
     }
+
+    // 🔍 Filtre par ville
+    if ($request->city) {
+        $query->where('city', $request->city);
+    }
+
+    $establishments = $query->get();
+
+    // 🔽 Pour dropdown villes
+    $cities = Establishment::select('city')->distinct()->pluck('city');
+
+    return view('establishments.index', compact('establishments','cities'));
+}
 
     // ✅ CREATE VIEW
     public function create()

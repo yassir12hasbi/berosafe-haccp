@@ -10,17 +10,28 @@ class PermissionController extends Controller
 {
 
     // Liste des users pour gérer leurs permissions
-  public function index()
+  public function index(Request $request)
 {
-    // Récupérer uniquement les users avec role 'admin' ou 'employee'
-    $users = User::with('role')
-        ->whereHas('role', function($query){
-            $query->whereIn('name', ['admin','employee']); // exactement comme dans la table roles
-        })
-        ->get();
+    $query = User::with('role', 'establishment');
 
-    return view('permissions.index', compact('users'));
+    // Filtrer seulement admin + employee
+    $query->whereHas('role', function ($q) {
+        $q->whereIn('name', ['admin', 'employee']);
+    });
+
+    // 🔥 FILTRE PAR ETABLISSEMENT
+    if ($request->establishment_id) {
+        $query->where('establishment_id', $request->establishment_id);
+    }
+
+    $users = $query->get();
+
+    // 🔥 récupérer liste établissements pour select
+    $establishments = \App\Models\Establishment::all();
+
+    return view('permissions.index', compact('users', 'establishments'));
 }
+
 
 
     // Afficher permissions d'un user

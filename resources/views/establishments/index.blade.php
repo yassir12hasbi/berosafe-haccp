@@ -18,6 +18,42 @@
         </div>
 
         <div class="mt-8 flow-root">
+            <!-- 🔥 FILTRES -->
+<form method="GET" action="{{ route('establishments.index') }}" class="mb-6 flex flex-wrap gap-4">
+
+    <!-- Nom établissement -->
+    <input 
+        type="text" 
+        name="name"
+        value="{{ request('name') }}"
+        placeholder="Nom établissement"
+        class="border rounded px-3 py-2"
+    >
+
+    <!-- Ville -->
+    <select name="city" class="border rounded px-3 py-2">
+        <option value="">Toutes les villes</option>
+        @foreach($cities as $city)
+            <option value="{{ $city }}" 
+                {{ request('city') == $city ? 'selected' : '' }}>
+                {{ $city }}
+            </option>
+        @endforeach
+    </select>
+
+    <!-- Bouton filtrer -->
+    <button type="submit"
+        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        Filtrer
+    </button>
+
+    <!-- Reset -->
+    <a href="{{ route('establishments.index') }}"
+       class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
+        Reset
+    </a>
+
+</form>
             <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                 <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
                     <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">

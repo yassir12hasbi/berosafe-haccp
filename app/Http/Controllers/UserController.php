@@ -12,11 +12,24 @@ use Illuminate\Support\Facades\Auth;
 class UserController extends Controller
 {
 
-    public function index()
-    {
-        $users = User::with('role','establishment')->get();
-        return view('users.index', compact('users'));
+   public function index(Request $request)
+{
+    $query = User::with('role','establishment');
+
+    // Filtre par établissement
+    if ($request->establishment_id) {
+        $query->where('establishment_id', $request->establishment_id);
     }
+
+    $users = $query->get();
+
+    // Pour remplir le select
+    $establishments = \App\Models\Establishment::all();
+
+    return view('users.index', compact('users','establishments'));
+}
+    
+     
 
     public function create()
     {
