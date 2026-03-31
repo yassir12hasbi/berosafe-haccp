@@ -24,7 +24,7 @@
 
         <!-- La carte blanche qui contient le formulaire -->
         <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg text-brand-dark">
-            {{ $slot }}
+            @yield('content')
         </div>
     </div>
 </body>

@@ -1,111 +1,120 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="px-4 sm:px-6 lg:px-8">
-        <div class="sm:flex sm:items-center">
-            <div class="sm:flex-auto">
-                <svg class="w-6 h-6 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
-                <h1 class="text-2xl font-bold mb-4">Établissements</h1>
-                <p class="mt-2 text-sm text-gray-700">Liste de tous les établissements enregistrés, incluant leur nom, type et ville.</p>
+<div class="p-6 lg:p-8">
+    <!-- En-tête de la page -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 rounded-xl bg-[#1F65A7]/20 border border-[#1F65A7]/30 flex items-center justify-center">
+                    <i class="fa-solid fa-building text-[#6EB7F5]"></i>
+                </div>
+                <h1 class="text-3xl font-extrabold text-[#2D6195]">Établissements</h1>
             </div>
-            <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                <a href="{{ route('establishments.create') }}" class="block rounded-md bg-brand-green px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-brand-green/500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green transition-colors">
-                    Ajouter un établissement
+            <p class="text-[#1D2309]">Gérez la liste complète des établissements enregistrés.</p>
+        </div>
+        <a href="{{ route('establishments.create') }}" class="mt-4 sm:mt-0 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#6ED17B] to-[#2A8734] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/40 transition-all">
+            <i class="fa-solid fa-plus-circle"></i>
+            Ajouter un établissement
+        </a>
+    </div>
+
+    <!-- Carte des filtres -->
+    <div class="glass-card rounded-2xl p-6 mb-8 border border-white/10">
+        <form method="GET" action="{{ route('establishments.index') }}" class="flex flex-wrap gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <label for="name" class="block text-xs font-bold uppercase tracking-[0.2em] text-[#1D2309] mb-2">Nom</label>
+                <input 
+                    type="text" 
+                    id="name"
+                    name="name"
+                    value="{{ request('name') }}"
+                    placeholder="Rechercher par nom..."
+                    class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1F65A7]/50 focus:border-transparent transition-all"
+                >
+            </div>
+            <div class="min-w-[200px]">
+                <label for="city" class="block text-xs font-bold uppercase tracking-[0.2em] text-[#1D2309] mb-2">Ville</label>
+                <select id="city" name="city" class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-[#2D6195] focus:outline-none focus:ring-2 focus:ring-[#1F65A7]/50 focus:border-transparent transition-all">
+                    <option value="">Toutes les villes</option>
+                    @foreach($cities ?? [] as $city)
+                        <option value="{{ $city }}" {{ request('city') == $city ? 'selected' : '' }}>{{ $city }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex items-end gap-3">
+                <button type="submit" class="rounded-xl bg-gradient-to-r from-[#1F65A7] to-[#13385E] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 transition-all">
+                    <i class="fa-solid fa-filter mr-2"></i>Filtrer
+                </button>
+                <a href="{{ route('establishments.index') }}" class="rounded-xl bg-white/10 px-6 py-3 text-sm font-bold text-[#FF1635] hover:bg-white/20 transition-all">
+                    <i class="fa-solid fa-rotate-left mr-2"></i>Réinitialiser
                 </a>
             </div>
-        </div>
-
-        <div class="mt-8 flow-root">
-            <!-- 🔥 FILTRES -->
-<form method="GET" action="{{ route('establishments.index') }}" class="mb-6 flex flex-wrap gap-4">
-
-    <!-- Nom établissement -->
-    <input 
-        type="text" 
-        name="name"
-        value="{{ request('name') }}"
-        placeholder="Nom établissement"
-        class="border rounded px-3 py-2"
-    >
-
-    <!-- Ville -->
-    <select name="city" class="border rounded px-3 py-2">
-        <option value="">Toutes les villes</option>
-        @foreach($cities as $city)
-            <option value="{{ $city }}" 
-                {{ request('city') == $city ? 'selected' : '' }}>
-                {{ $city }}
-            </option>
-        @endforeach
-    </select>
-
-    <!-- Bouton filtrer -->
-    <button type="submit"
-        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-        Filtrer
-    </button>
-
-    <!-- Reset -->
-    <a href="{{ route('establishments.index') }}"
-       class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
-        Reset
-    </a>
-
-</form>
-            <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                        <table class="min-w-full divide-y divide-gray-300">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">ID</th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Nom</th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ville</th>
-                                    <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6"><span class="sr-only">Actions</span></th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 bg-white">
-                                @forelse ($establishments as $establishment)
-                                <tr class="hover:bg-gray-50">
-                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{{ $establishment->id }}</td>
-                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{{ $establishment->name }}</td>
-                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $establishment->type }}</td>
-                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $establishment->city }}</td>
-                                    <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                                        <a href="{{ route('establishments.edit', $establishment->id) }}" class="text-indigo-600 hover:text-indigo-900 mr-4">Modifier</a>
-                                        <form method="POST" action="{{ route('establishments.destroy', $establishment->id) }}" class="inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet établissement ?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-600 hover:text-red-900">Supprimer</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="px-6 py-12 text-center">
-                                            <div class="text-gray-400">
-                                                <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                                </svg>
-                                                <h3 class="mt-2 text-sm font-semibold text-gray-400">Aucun établissement</h3>
-                                                <p class="mt-1 text-sm text-gray-500">Commencez par en ajouter un nouveau.</p>
-                                                <div class="mt-6">
-                                                    <a href="{{ route('establishments.create') }}" class="inline-flex items-center rounded-md bg-brand-green px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-green/500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green">
-                                                        Ajouter un établissement
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </form>
     </div>
+
+  <!-- Carte du tableau -->
+<div class="glass-card rounded-2xl border border-white/10 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-slate-800/50 border-b border-white/10">
+                <tr>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.2em] text-white">ID</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.2em] text-white">Nom</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.2em] text-white">Type</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.2em] text-white">Ville</th>
+                    <th scope="col" class="relative px-6 py-4 text-right text-xs font-bold uppercase tracking-[0.2em] text-white">
+                        <span>Actions</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                @forelse ($establishments as $establishment)
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <!-- Données principales en blanc pur pour une lisibilité maximale -->
+                        <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-blue">{{ $establishment->id }}</td>
+                        <td class="whitespace-nowrap px-6 py-4 text-sm text-blue font-medium">{{ $establishment->name }}</td>
+                        
+                        <!-- Données secondaires en gris très clair pour créer une hiérarchie -->
+                        <td class="whitespace-nowrap px-6 py-4 text-sm text-blue">{{ $establishment->type }}</td>
+                        <td class="whitespace-nowrap px-6 py-4 text-sm text-blue">{{ $establishment->city }}</td>
+                        
+                        <!-- La colonne Actions garde ses couleurs distinctives -->
+                        <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                            <div class="flex items-center justify-end gap-4">
+                                <a href="{{ route('establishments.edit', $establishment->id) }}" class="text-[#6EB7F5] hover:text-[#4A9FE8] transition-colors" title="Modifier">
+                                    <i class="fa-solid fa-pen-to-square text-lg"></i>
+                                </a>
+                                <form method="POST" action="{{ route('establishments.destroy', $establishment->id) }}" class="inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet établissement ?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-400 hover:text-[#f70a0a] transition-colors" title="Supprimer">
+                                        <i class="fa-solid fa-trash-can text-lg"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="px-6 py-16 text-center">
+                            <div class="text-slate-400">
+                                <i class="fa-solid fa-building-circle-xmark text-5xl mb-4"></i>
+                                <h3 class="mt-2 text-lg font-semibold text-slate-300">Aucun établissement trouvé</h3>
+                                <p class="mt-1 text-sm text-slate-500">Commencez par en ajouter un nouveau.</p>
+                                <div class="mt-6">
+                                    <a href="{{ route('establishments.create') }}" class="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#6ED17B] to-[#2A8734] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/40 transition-all">
+                                        <i class="fa-solid fa-plus-circle"></i>
+                                        Ajouter un établissement
+                                    </a>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
 @endsection
