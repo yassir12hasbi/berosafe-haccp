@@ -69,7 +69,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.keyboardContainer}
     >
@@ -89,8 +89,8 @@ export default function LoginScreen() {
               ]}
             >
               <ThemedText style={[styles.badgeText, { backgroundColor: accentTeal }]}>HACCP DIGITAL</ThemedText>
-              <Image 
-                source={require('../../assets/images/partial-react-logo.png')} 
+              <Image
+                source={require('../../assets/images/partial-react-logo.png')}
                 style={[styles.logo, isLandscape && styles.logoLandscape]}
                 resizeMode="contain"
               />
@@ -171,7 +171,7 @@ export default function LoginScreen() {
                 <ThemedText style={styles.errorText}>{formError}</ThemedText>
               ) : null}
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
                   styles.button,
                   { backgroundColor: brandGreen, opacity: isSubmitting || !isFormValid ? 0.65 : 1 },

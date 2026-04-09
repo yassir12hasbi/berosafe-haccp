@@ -4,7 +4,15 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b0fcb66a-0406-4617-b92b-36164c4582f2" name="Changes" comment="" />
+    <list default="true" id="b0fcb66a-0406-4617-b92b-36164c4582f2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/(auth)/login.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/(auth)/login.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/oil-control/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/oil-control/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/reception/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/reception/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/traceability/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/traceability/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/package.json" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -12,6 +20,9 @@
   </component>
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectColorInfo"><![CDATA[{
   "customColor": "",
@@ -30,6 +41,7 @@
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "origin/V1__APP",
     "kotlin-language-version-configured": "true",
     "settings.editor.selected.configurable": "preferences.general",
     "show.migrate.to.gradle.popup": "false"

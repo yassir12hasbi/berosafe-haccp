@@ -1,338 +1,325 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
   StyleSheet,
-  FlatList,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
   Alert,
-} from "react-native";
-import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
+  SafeAreaView,
+} from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 
-// Données initiales
-const INITIAL_DATABASE = {
-  "Cuisine Chaude": [
-    { id: "1", code: "FR-CC-01", desc: "Bac Principal 15L" },
-    { id: "2", code: "FR-CC-02", desc: "Bac Viandes 10L" },
-  ],
-  "Garde Manger": [],
-  Snack: [{ id: "3", code: "FR-SN-01", desc: "Frites Plage" }],
-};
-
-const ZONES = Object.keys(INITIAL_DATABASE);
-
-export default function HomeScreen() {
-  const [database, setDatabase] = useState(INITIAL_DATABASE);
-  const [activeZone, setActiveZone] = useState(ZONES[0]);
-  const [activeFryer, setActiveFryer] = useState<any>(null);
-  const [temp, setTemp] = useState(160);
-  const [peroxide, setPeroxide] = useState(15);
-  const [oilStatus, setOilStatus] = useState<"reused" | "changed">("reused");
-  const [checklist, setChecklist] = useState({
-    couleur: true,
-    aspect: true,
-    residus: true,
-    etat: true,
-  });
-  const [comment, setComment] = useState("");
-
-  const handleTempChange = (delta: number) => {
-    setTemp((prev) => prev + delta);
-  };
-
-  const handlePeroxideChange = (delta: number) => {
-    setPeroxide((prev) => prev + delta);
-  };
-
-  const toggleOilStatus = () => {
-    setOilStatus((prev) => (prev === "reused" ? "changed" : "reused"));
-  };
-
-  const toggleChecklistItem = (key: string) => {
-    setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const saveReport = () => {
-    Alert.alert("Rapport enregistré", "Le rapport a été sauvegardé avec succès !");
-  };
-
-  const renderFryerItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[
-        styles.fryerItem,
-        activeFryer?.id === item.id && styles.activeFryer,
-      ]}
-      onPress={() => setActiveFryer(item)}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <View style={styles.fryerIcon}>
-          <FontAwesome5 name="burn" size={16} color="#64748b" />
-        </View>
-        <View>
-          <Text style={styles.fryerCode}>{item.code}</Text>
-          <Text style={styles.fryerDesc}>{item.desc || "Sans description"}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity>
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>HUILES DE FRITURE</Text>
-      </View>
-
-      {/* Main */}
-      <View style={styles.main}>
-        {/* Left panel */}
-        <View style={styles.leftPanel}>
-          {/* Zones */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ gap: 8 }}>
-            {ZONES.map((zone) => (
-              <TouchableOpacity
-                key={zone}
-                style={[
-                  styles.zoneButton,
-                  activeZone === zone && styles.activeZone,
-                ]}
-                onPress={() => {
-                  setActiveZone(zone);
-                  setActiveFryer(null);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.zoneText,
-                    activeZone === zone && { color: "white" },
-                  ]}
-                >
-                  {zone}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Fryers */}
-          <FlatList
-            data={database[activeZone]}
-            keyExtractor={(item) => item.id}
-            renderItem={renderFryerItem}
-            ListEmptyComponent={
-              <Text style={{ textAlign: "center", marginTop: 20, color: "#64748b" }}>
-                Aucune friteuse dans cette zone
-              </Text>
-            }
-          />
-        </View>
-
-        {/* Right panel */}
-        <ScrollView style={styles.rightPanel}>
-          {!activeFryer ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="hand-pointer" size={64} color="#cbd5e1" />
-              <Text style={{ fontWeight: "bold", fontSize: 16 }}>
-                Sélectionnez une friteuse
-              </Text>
-              <Text style={{ color: "#64748b" }}>
-                Choisissez un équipement à gauche pour commencer le contrôle.
-              </Text>
-            </View>
-          ) : (
-            <>
-              {/* Température */}
-              <View style={styles.inputBox}>
-                <Text style={styles.inputLabel}>Température (°C)</Text>
-                <View style={styles.inputRow}>
-                  <TouchableOpacity onPress={() => handleTempChange(-1)}>
-                    <Ionicons name="remove" size={24} color="#64748b" />
-                  </TouchableOpacity>
-                  <TextInput
-                    style={styles.input}
-                    value={temp.toString()}
-                    keyboardType="numeric"
-                    onChangeText={(t) => setTemp(Number(t))}
-                  />
-                  <TouchableOpacity onPress={() => handleTempChange(1)}>
-                    <Ionicons name="add" size={24} color="#64748b" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Peroxyde */}
-              <View style={styles.inputBox}>
-                <Text style={styles.inputLabel}>Indice de Peroxyde (%)</Text>
-                <View style={styles.inputRow}>
-                  <TouchableOpacity onPress={() => handlePeroxideChange(-1)}>
-                    <Ionicons name="remove" size={24} color="#64748b" />
-                  </TouchableOpacity>
-                  <TextInput
-                    style={styles.input}
-                    value={peroxide.toString()}
-                    keyboardType="numeric"
-                    onChangeText={(t) => setPeroxide(Number(t))}
-                  />
-                  <TouchableOpacity onPress={() => handlePeroxideChange(1)}>
-                    <Ionicons name="add" size={24} color="#64748b" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Toggle Oil Status */}
-              <TouchableOpacity
-                style={[
-                  styles.toggleSwitch,
-                  oilStatus === "reused" ? styles.reused : styles.changed,
-                ]}
-                onPress={toggleOilStatus}
-              >
-                <Text
-                  style={[
-                    styles.toggleOption,
-                    oilStatus === "reused" && { color: "white" },
-                  ]}
-                >
-                  HUILE RÉUTILISÉE
-                </Text>
-                <Text
-                  style={[
-                    styles.toggleOption,
-                    oilStatus === "changed" && { color: "white" },
-                  ]}
-                >
-                  HUILE CHANGÉE
-                </Text>
-              </TouchableOpacity>
-
-              {/* Checklist */}
-              <View style={{ marginTop: 20 }}>
-                {Object.keys(checklist).map((key) => (
-                  <TouchableOpacity
-                    key={key}
-                    style={[
-                      styles.checklistItem,
-                      checklist[key as keyof typeof checklist] &&
-                        styles.checklistItemChecked,
-                    ]}
-                    onPress={() => toggleChecklistItem(key)}
-                  >
-                    <Text style={styles.checklistText}>{key.toUpperCase()}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Comment */}
-              <TextInput
-                placeholder="Commentaires / Actions correctives"
-                value={comment}
-                onChangeText={setComment}
-                multiline
-                style={styles.commentBox}
-              />
-
-              <TouchableOpacity style={styles.saveButton} onPress={saveReport}>
-                <Text style={styles.saveButtonText}>VALIDER LE RAPPORT DE CONTRÔLE</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </ScrollView>
-      </View>
-    </View>
-  );
+interface Fryer {
+  id: string;
+  code: string;
+  desc: string;
 }
 
+interface Database {
+  [key: string]: Fryer[];
+}
+
+const COLORS = {
+  primary: '#13385E',
+  secondary: '#1F65A7',
+  green: '#2A8734',
+  yellow: '#Eab308',
+  red: '#ef4444',
+  bg: '#f1f5f9',
+  white: '#ffffff',
+  slate200: '#e2e8f0',
+  slate500: '#64748b',
+  slate700: '#334155',
+};
+
+const { width, height } = Dimensions.get('window');
+const isTablet = width >= 768;
+
+const OilControlScreen: React.FC = () => {
+  const [database, setDatabase] = useState<Database>({
+    "Cuisine Chaude": [
+      { id: "1", code: "FR-CC-01", desc: "Bac Principal 15L" },
+      { id: "2", code: "FR-CC-02", desc: "Bac Viandes 10L" }
+    ],
+    "Garde Manger": [],
+    "Snack": [
+      { id: "3", code: "FR-SN-01", desc: "Frites Plage" }
+    ]
+  });
+
+  const [zones] = useState<string[]>(Object.keys(database));
+  const [activeZone, setActiveZone] = useState<string>(zones[0]);
+  const [activeFryer, setActiveFryer] = useState<Fryer | null>(null);
+
+  const [inputTemp, setInputTemp] = useState<string>('');
+  const [inputPeroxide, setInputPeroxide] = useState<string>('');
+  const [oilStatus, setOilStatus] = useState<'reused' | 'changed'>('reused');
+  const [comment, setComment] = useState<string>('');
+  const [checklist, setChecklist] = useState({
+    cl_couleur: true,
+    cl_aspect: true,
+    cl_residus: true,
+    cl_etat: true,
+  });
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newFryerCode, setNewFryerCode] = useState('');
+  const [newFryerDesc, setNewFryerDesc] = useState('');
+  const [showToast, setShowToast] = useState(false);
+
+  const isTempHigh = parseFloat(inputTemp) > 180;
+  const isPeroxideHigh = parseFloat(inputPeroxide) >= 24;
+  const hasNC = isTempHigh || isPeroxideHigh;
+
+  useEffect(() => {
+    if (hasNC) {
+      setOilStatus('changed');
+    } else if (inputTemp && inputPeroxide) {
+      setOilStatus('reused');
+    }
+  }, [inputTemp, inputPeroxide, hasNC]);
+
+  const handleSelectFryer = (fryer: Fryer) => {
+    setActiveFryer(fryer);
+    setInputTemp('');
+    setInputPeroxide('');
+    setComment('');
+    setOilStatus('reused');
+    setChecklist({
+      cl_couleur: true,
+      cl_aspect: true,
+      cl_residus: true,
+      cl_etat: true,
+    });
+  };
+
+  const adjustValue = (type: 'temp' | 'peroxide', delta: number) => {
+    const currentVal = parseFloat(type === 'temp' ? inputTemp : inputPeroxide) || (type === 'temp' ? 160 : 15);
+    const setter = type === 'temp' ? setInputTemp : setInputPeroxide;
+    setter((currentVal + delta).toString());
+  };
+
+  const toggleCheckItem = (key: keyof typeof checklist) => {
+    setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleOilStatusToggle = () => {
+    if (isPeroxideHigh) {
+      Alert.alert("Action impossible", "Indice de peroxyde ≥ 24%. Changement obligatoire !");
+      return;
+    }
+    setOilStatus(prev => prev === 'reused' ? 'changed' : 'reused');
+  };
+
+  const handleSaveReport = () => {
+    if (!activeFryer) return;
+    if (!inputTemp || !inputPeroxide) {
+      Alert.alert("Erreur", "Saisissez température et indice de peroxyde.");
+      return;
+    }
+
+    const report = {
+      date: new Date().toISOString(),
+      zone: activeZone,
+      fryer: activeFryer.code,
+      temperature: inputTemp,
+      peroxide: inputPeroxide,
+      decision: oilStatus === 'changed' ? 'Changée' : 'Réutilisée',
+      checklist,
+      comment,
+      user: "Chef MAY"
+    };
+    console.log("Rapport Sauvegardé :", report);
+
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+      setActiveFryer(null);
+    }, 2000);
+  };
+
+  const handleAddFryer = () => {
+    if (!newFryerCode.trim()) {
+      Alert.alert("Erreur", "Le code est requis.");
+      return;
+    }
+    const newFryer: Fryer = { id: Date.now().toString(), code: newFryerCode.toUpperCase(), desc: newFryerDesc };
+    setDatabase(prev => ({ ...prev, [activeZone]: [...(prev[activeZone] || []), newFryer] }));
+    setModalVisible(false);
+    setNewFryerCode('');
+    setNewFryerDesc('');
+    handleSelectFryer(newFryer);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        {/* HEADER */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerBtn}>
+            <FontAwesome5 name="arrow-left" size={18} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>HUILES DE FRITURE</Text>
+          <View style={styles.userBadge}>
+            <FontAwesome5 name="user-tie" size={16} color="white" />
+            <Text style={styles.userName}>Chef MAY</Text>
+          </View>
+        </View>
+
+        {/* CONTENU PRINCIPAL */}
+        <View style={[styles.mainContent, { flexDirection: isTablet ? 'row' : 'column' }]}>
+          {/* LISTE FRITEUSES */}
+          <View style={[styles.leftPanel, { width: isTablet ? '35%' : '100%' }]}>
+            <ScrollView style={styles.zonesScroll} horizontal={!isTablet}>
+              {zones.map(z => (
+                <TouchableOpacity
+                  key={z}
+                  onPress={() => { setActiveZone(z); setActiveFryer(null); }}
+                  style={[styles.zoneBtn, activeZone === z && styles.zoneBtnActive]}
+                >
+                  <Text style={[styles.zoneBtnText, activeZone === z && styles.zoneBtnTextActive]}>{z}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <ScrollView style={styles.fryerList}>
+              {database[activeZone]?.length === 0 ? (
+                <Text style={styles.emptyText}>Aucune friteuse.</Text>
+              ) : (
+                database[activeZone].map(f => (
+                  <TouchableOpacity
+                    key={f.id}
+                    onPress={() => handleSelectFryer(f)}
+                    style={[styles.fryerItem, activeFryer?.id === f.id && styles.fryerItemActive]}
+                  >
+                    <View style={styles.fryerIconBg}>
+                      <FontAwesome5 name="fire-burner" color={COLORS.slate500} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fryerCode}>{f.code}</Text>
+                      <Text style={styles.fryerDesc}>{f.desc || 'Sans description'}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+
+          {/* FORMULAIRE */}
+          <View style={[styles.rightPanel, { width: isTablet ? '65%' : '100%' }]}>
+            {!activeFryer ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateTitle}>Sélectionnez une friteuse</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.formScroll}>
+                <Text style={styles.formTitle}>Rapport: {activeFryer.code}</Text>
+
+                <View style={styles.measuresRow}>
+                  <View style={styles.inputCard}>
+                    <Text>Température (°C)</Text>
+                    <View style={styles.inputGroup}>
+                      <TouchableOpacity onPress={() => adjustValue('temp', -1)}>
+                        <FontAwesome5 name="minus" size={14} />
+                      </TouchableOpacity>
+                      <TextInput
+                        value={inputTemp}
+                        onChangeText={setInputTemp}
+                        keyboardType="numeric"
+                        style={styles.numericInput}
+                        placeholder="160"
+                      />
+                      <TouchableOpacity onPress={() => adjustValue('temp', 1)}>
+                        <FontAwesome5 name="plus" size={14} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.inputCard}>
+                    <Text>Indice Peroxyde (%)</Text>
+                    <View style={styles.inputGroup}>
+                      <TouchableOpacity onPress={() => adjustValue('peroxide', -1)}>
+                        <FontAwesome5 name="minus" size={14} />
+                      </TouchableOpacity>
+                      <TextInput
+                        value={inputPeroxide}
+                        onChangeText={setInputPeroxide}
+                        keyboardType="numeric"
+                        style={styles.numericInput}
+                        placeholder="15"
+                      />
+                      <TouchableOpacity onPress={() => adjustValue('peroxide', 1)}>
+                        <FontAwesome5 name="plus" size={14} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity onPress={handleSaveReport} style={styles.saveBtn}>
+                  <Text style={styles.saveBtnText}>VALIDER LE RAPPORT</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f1f5f9" },
+  container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
-    height: 60,
-    backgroundColor: "#13385E",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    gap: 10,
+    backgroundColor: COLORS.primary,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  headerTitle: { color: "white", fontWeight: "bold", fontSize: 18 },
-  main: { flex: 1, flexDirection: "row", gap: 10 },
-  leftPanel: { width: "30%", padding: 10 },
-  rightPanel: { flex: 1, padding: 10 },
-  zoneButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: "white",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-  },
-  activeZone: { backgroundColor: "#13385E" },
-  zoneText: { fontWeight: "bold", fontSize: 12 },
-  fryerItem: {
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    marginVertical: 4,
-  },
-  activeFryer: { borderLeftWidth: 4, borderLeftColor: "#1F65A7", backgroundColor: "#eff6ff" },
-  fryerIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#e2e8f0",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  fryerCode: { fontWeight: "bold", color: "#13385E" },
-  fryerDesc: { fontSize: 10, color: "#64748b" },
-  emptyState: { flex: 1, justifyContent: "center", alignItems: "center", gap: 8 },
-  inputBox: { marginVertical: 10 },
-  inputLabel: { fontSize: 11, fontWeight: "bold", marginBottom: 4 },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  input: { flex: 1, textAlign: "center", fontSize: 20, paddingVertical: 8 },
-  toggleSwitch: {
-    flexDirection: "row",
-    borderRadius: 25,
-    overflow: "hidden",
-    marginVertical: 10,
-  },
-  toggleOption: { flex: 1, textAlign: "center", paddingVertical: 10, fontWeight: "bold" },
-  reused: { backgroundColor: "#2A8734" },
-  changed: { backgroundColor: "#Eab308" },
-  checklistItem: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#ef4444",
-    borderRadius: 12,
-    marginVertical: 4,
-  },
-  checklistItemChecked: { backgroundColor: "#f0fdf4", borderColor: "#2A8734" },
-  checklistText: { fontWeight: "bold", color: "#13385E" },
-  commentBox: {
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    padding: 10,
-    marginTop: 10,
-    minHeight: 60,
-    textAlignVertical: "top",
-  },
-  saveButton: {
-    backgroundColor: "#13385E",
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 20,
-    alignItems: "center",
-  },
-  saveButtonText: { color: "white", fontWeight: "bold", fontSize: 16 },
+  headerBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8 },
+  headerTitle: { color: 'white', fontWeight: '700', fontSize: 18 },
+  userBadge: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  userName: { color: 'white', fontWeight: '600' },
+
+  mainContent: { flex: 1, gap: 12 },
+  leftPanel: { backgroundColor: 'white', padding: 8, borderRadius: 12 },
+  rightPanel: { backgroundColor: 'white', padding: 12, borderRadius: 12 },
+
+  zonesScroll: { marginBottom: 8 },
+  zoneBtn: { padding: 8, marginRight: 8, borderRadius: 8, borderWidth: 1, borderColor: COLORS.slate200 },
+  zoneBtnActive: { backgroundColor: COLORS.secondary, borderColor: COLORS.secondary },
+  zoneBtnText: { fontSize: 12, color: COLORS.slate700 },
+  zoneBtnTextActive: { color: 'white' },
+
+  fryerList: { flex: 1 },
+  fryerItem: { flexDirection: 'row', alignItems: 'center', padding: 8, borderBottomWidth: 1, borderColor: COLORS.slate200 },
+  fryerItemActive: { backgroundColor: '#eff6ff' },
+  fryerIconBg: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.slate200, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  fryerCode: { fontWeight: '700' },
+  fryerDesc: { fontSize: 12, color: COLORS.slate500 },
+
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyStateTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.slate500 },
+
+  formScroll: { flex: 1 },
+  formTitle: { fontWeight: '700', fontSize: 16, marginBottom: 12 },
+
+  measuresRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
+  inputCard: { flex: 1, padding: 8, borderRadius: 8, borderWidth: 1, borderColor: COLORS.slate200 },
+  inputGroup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  numericInput: { borderWidth: 1, borderColor: COLORS.slate200, padding: 4, width: 60, textAlign: 'center', borderRadius: 4 },
+
+  saveBtn: { backgroundColor: COLORS.primary, padding: 12, marginTop: 12, borderRadius: 8, alignItems: 'center' },
+  saveBtnText: { color: 'white', fontWeight: '700' },
 });
+
+export default OilControlScreen;

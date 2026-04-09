@@ -17,10 +17,10 @@ import { ThemedText } from '../../components/themed-text';
 import { ThemedView } from '../../components/themed-view';
 import { IconSymbol } from '../../components/ui/icon-symbol';
 import { BeroColors } from '../../constants/theme';
-import traceabilityApi, { 
-  TraceabilityBatch, 
-  Product, 
-  TraceabilityInitialData 
+import traceabilityApi, {
+  TraceabilityBatch,
+  Product,
+  TraceabilityInitialData
 } from '../../api/traceability';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getErrorDetails } from '../../utils/error';
@@ -36,21 +36,21 @@ export default function TraceabilityGanttScreen() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<TraceabilityInitialData | null>(null);
   const [batches, setBatches] = useState<TraceabilityBatch[]>([]);
-  
+
   // Date selection for the view (month/year)
   const [viewDate, setViewDate] = useState(new Date());
-  
+
   // Filtering
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<TraceabilityBatch | null>(null);
   const [isGlobalCreate, setIsGlobalCreate] = useState(false);
-  
+
   // Form State
   const [lotNumber, setLotNumber] = useState('');
   const [zone, setZone] = useState('');
@@ -173,14 +173,14 @@ export default function TraceabilityGanttScreen() {
       'Cette action est irréversible.',
       [
         { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Supprimer', 
-          style: 'destructive', 
+        {
+          text: 'Supprimer',
+          style: 'destructive',
           onPress: async () => {
             await traceabilityApi.deleteBatch(selectedBatch.id);
             setIsModalOpen(false);
             fetchBatches();
-          } 
+          }
         }
       ]
     );
@@ -208,7 +208,7 @@ export default function TraceabilityGanttScreen() {
     const expiry = new Date(batch.expires_at);
     const today = new Date();
     today.setHours(0,0,0,0);
-    
+
     if (expiry < today) return '#ef4444'; // Red
     const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24));
     if (diffDays <= 1) return '#f59e0b'; // Amber
@@ -222,16 +222,16 @@ export default function TraceabilityGanttScreen() {
     let tracks: number[] = [];
     let maxTrack = 0;
     const sortedBatches = [...prodBatches].sort((a, b) => new Date(a.opened_at).getTime() - new Date(b.opened_at).getTime());
-    
+
     const processedBatches = sortedBatches.map(batch => {
       const sDate = new Date(batch.opened_at);
       const eDate = new Date(batch.status === 'closed' && batch.closed_at ? batch.closed_at : batch.expires_at);
-      
+
       let ti = 0;
       while (tracks[ti] !== undefined && tracks[ti] >= sDate.getTime()) ti++;
       tracks[ti] = eDate.getTime();
       if (ti > maxTrack) maxTrack = ti;
-      
+
       return { ...batch, _track: ti };
     });
 
@@ -255,11 +255,11 @@ export default function TraceabilityGanttScreen() {
               const dayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i + 1);
               const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
               const dateStr = `${viewDate.getFullYear()}-${(viewDate.getMonth() + 1).toString().padStart(2, '0')}-${(i + 1).toString().padStart(2, '0')}`;
-              
+
               return (
-                <TouchableOpacity 
-                  key={i} 
-                  style={[styles.cell, isWeekend && styles.weekendCell]} 
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.cell, isWeekend && styles.weekendCell]}
                   onPress={() => openCreateModal(prod, dateStr)}
                 />
               );
@@ -287,7 +287,7 @@ export default function TraceabilityGanttScreen() {
               <TouchableOpacity
                 key={batch.id}
                 style={[
-                  styles.batchBar, 
+                  styles.batchBar,
                   { left, width: barWidth, top, backgroundColor: getStatusColor(batch) }
                 ]}
                 onPress={() => openEditModal(batch, prod)}
@@ -303,7 +303,7 @@ export default function TraceabilityGanttScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ 
+      <Stack.Screen options={{
         title: 'Planning DLC',
         headerShown: true,
         headerLeft: () => (
@@ -324,10 +324,10 @@ export default function TraceabilityGanttScreen() {
            <TouchableOpacity onPress={() => changeMonth(1)} style={styles.navBtn}>
              <IconSymbol name="chevron.right" size={20} color={BeroColors.blue} />
            </TouchableOpacity>
-           
+
            {/* Global "+" Button */}
-           <TouchableOpacity 
-             onPress={() => openCreateModal(null)} 
+           <TouchableOpacity
+             onPress={() => openCreateModal(null)}
              style={styles.addGlobalBtn}
            >
               <IconSymbol name="plus.circle.fill" size={24} color="#fff" />
@@ -338,15 +338,15 @@ export default function TraceabilityGanttScreen() {
         {/* Category Tabs */}
         <View style={styles.categoryBar}>
            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.catTab, selectedCategoryId === null && styles.activeCatTab]}
                 onPress={() => setSelectedCategoryId(null)}
               >
                 <ThemedText style={[styles.catTabText, selectedCategoryId === null && styles.activeCatTabText]}>Tous</ThemedText>
               </TouchableOpacity>
               {data?.categories.map(cat => (
-                <TouchableOpacity 
-                  key={cat.id} 
+                <TouchableOpacity
+                  key={cat.id}
                   style={[styles.catTab, selectedCategoryId === cat.id && styles.activeCatTab]}
                   onPress={() => setSelectedCategoryId(cat.id)}
                 >
@@ -360,7 +360,7 @@ export default function TraceabilityGanttScreen() {
         <View style={styles.searchRow}>
            <View style={styles.searchContainer}>
              <IconSymbol name="magnifyingglass" size={18} color="#94a3b8" />
-             <TextInput 
+             <TextInput
                 style={styles.searchInput}
                 placeholder="Rechercher un produit..."
                 value={searchQuery}
@@ -394,7 +394,7 @@ export default function TraceabilityGanttScreen() {
                     const dayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i + 1);
                     const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
                     const isToday = new Date().toDateString() === dayDate.toDateString();
-                    
+
                     return (
                       <View key={i} style={[styles.dayCell, isWeekend && styles.weekendHeader]}>
                          <ThemedText style={[styles.dayNameText, isToday && styles.todayText]}>{DAYS_SHORT[dayDate.getDay()]}</ThemedText>
@@ -423,10 +423,10 @@ export default function TraceabilityGanttScreen() {
       )}
 
       {/* Modal: Open/Edit Batch (Reusing logic from previous implementation) */}
-      <Modal 
-        visible={isModalOpen} 
-        animationType="slide" 
-        transparent 
+      <Modal
+        visible={isModalOpen}
+        animationType="slide"
+        transparent
         onRequestClose={() => setIsModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
@@ -447,8 +447,8 @@ export default function TraceabilityGanttScreen() {
                   <View style={styles.productPickerContainer}>
                     <ScrollView style={styles.productPickerList} nestedScrollEnabled>
                       {data?.products.map(p => (
-                        <TouchableOpacity 
-                          key={p.id} 
+                        <TouchableOpacity
+                          key={p.id}
                           style={[styles.productPickItem, selectedProduct?.id === p.id && styles.productPickItemActive]}
                           onPress={() => {
                             setSelectedProduct(p);
@@ -467,11 +467,11 @@ export default function TraceabilityGanttScreen() {
               ) : (
                 <ThemedText style={styles.productHighlight}>{selectedProduct?.name}</ThemedText>
               )}
-              
+
               <View style={styles.formRow}>
                 <View style={[styles.inputGroup, { flex: 1 }]}>
                   <ThemedText style={styles.label}>N° DE LOT</ThemedText>
-                  <TextInput 
+                  <TextInput
                     style={styles.input}
                     placeholder="LOT-123..."
                     value={lotNumber}
@@ -480,7 +480,7 @@ export default function TraceabilityGanttScreen() {
                 </View>
                 <View style={[styles.inputGroup, { flex: 1 }]}>
                   <ThemedText style={styles.label}>POINT / ZONE</ThemedText>
-                  <TextInput 
+                  <TextInput
                     style={styles.input}
                     placeholder="Cuisine..."
                     value={zone}
@@ -500,8 +500,8 @@ export default function TraceabilityGanttScreen() {
 
                 <View style={styles.inputGroup}>
                   <ThemedText style={styles.label}>DLC CALCULÉE (+{selectedProduct?.max_dlc || 3}j)</ThemedText>
-                  <TouchableOpacity 
-                    style={[styles.dateField, styles.expiryField]} 
+                  <TouchableOpacity
+                    style={[styles.dateField, styles.expiryField]}
                     onPress={() => { setDateMode('expires_at'); setShowDatePicker(true); }}
                   >
                      <ThemedText style={styles.expiryValueText}>{expiresAt.toLocaleDateString()}</ThemedText>
@@ -514,13 +514,13 @@ export default function TraceabilityGanttScreen() {
                 <View style={styles.inputGroup}>
                   <ThemedText style={styles.label}>STATUT DU LOT</ThemedText>
                   <View style={styles.statusRow}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={[styles.statusToggle, status === 'active' && styles.statusToggleActive]}
                       onPress={() => setStatus('active')}
                     >
                       <ThemedText style={status === 'active' && styles.whiteText}>En cours</ThemedText>
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={[styles.statusToggle, status === 'closed' && styles.statusToggleClosed]}
                       onPress={() => setStatus('closed')}
                     >

@@ -1,6 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
+import { useWindowDimensions } from 'react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  
   ScrollView,
   StyleSheet,
   TextInput,
@@ -69,6 +69,9 @@ export default function ReceptionScreen() {
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [isDeliveryModalVisible, setIsDeliveryModalVisible] = useState(false);
 
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 900; // tablette ou desktop
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -112,6 +115,14 @@ export default function ReceptionScreen() {
   };
 
   const handlePickImage = async () => {
+    // ✅ Demander permission caméra
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert("Permission refusée", "Vous devez autoriser l'accès à la caméra.");
+      return;
+    }
+
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -119,7 +130,7 @@ export default function ReceptionScreen() {
       quality: 0.5,
     });
 
-    if (!result.canceled && result.assets[0].base64) {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
       setCapturedPhoto(`data:image/jpeg;base64,${result.assets[0].base64}`);
     }
   };
@@ -237,6 +248,11 @@ export default function ReceptionScreen() {
 
     try {
       setIsSubmitting(true);
+      console.log({
+        supplier_id: selectedSupplier.id,
+        delivery_note_number: deliveryNoteNumber,
+        lines: receptionLines,
+      });
       await receptionApi.storeReception({
         supplier_id: selectedSupplier.id,
         delivery_note_number: deliveryNoteNumber || null,
@@ -274,23 +290,69 @@ export default function ReceptionScreen() {
     </View>
   );
 
+  // --- MODIFIED: renderSupplierStep ---
   const renderSupplierStep = () => {
     const filteredSuppliers = data?.suppliers.filter(s =>
       s.name.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
     return (
-      <View style={styles.stepContainer}>
-        <ThemedText style={styles.stepTitle}>1. Choisir le fournisseur</ThemedText>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Rechercher un fournisseur..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      <View style={{ flex: 1 }}>
+        <Modal
+          visible={isDeliveryModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsDeliveryModalVisible(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalOverlay}
+          >
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <ThemedText style={styles.modalTitle}>N° Bon de Livraison</ThemedText>
+                <TouchableOpacity onPress={() => setIsDeliveryModalVisible(false)}>
+                  <IconSymbol name="xmark.circle.fill" size={24} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+
+              <ThemedText style={styles.modalSubtitle}>
+                Fournisseur : {selectedSupplier?.name}
+              </ThemedText>
+
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Ex: BL-12345 (Optionnel)"
+                value={deliveryNoteNumber}
+                onChangeText={setDeliveryNoteNumber}
+                autoFocus={true}
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalSecondaryButton}
+                  onPress={() => setIsDeliveryModalVisible(false)}
+                >
+                  <ThemedText style={styles.modalSecondaryButtonText}>Annuler</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalPrimaryButton}
+                  onPress={() => {
+                    setIsDeliveryModalVisible(false);
+                    setStep('product');
+                  }}
+                >
+                  <ThemedText style={styles.modalPrimaryButtonText}>Continuer</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
         <FlatList
           data={filteredSuppliers}
           keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.stepContainer}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[
@@ -313,70 +375,36 @@ export default function ReceptionScreen() {
               )}
             </TouchableOpacity>
           )}
-          contentContainerStyle={{ gap: 8 }}
-        />
-
-        <Modal
-          visible={isDeliveryModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setIsDeliveryModalVisible(false)}
-        >
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalOverlay}
-          >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <ThemedText style={styles.modalTitle}>N° Bon de Livraison</ThemedText>
-                <TouchableOpacity onPress={() => setIsDeliveryModalVisible(false)}>
-                  <IconSymbol name="xmark.circle.fill" size={24} color="#94a3b8" />
-                </TouchableOpacity>
-              </View>
-              
-              <ThemedText style={styles.modalSubtitle}>
-                Fournisseur : {selectedSupplier?.name}
-              </ThemedText>
-
+          ListHeaderComponent={
+            <View>
+              <ThemedText style={styles.stepTitle}>1. Choisir le fournisseur</ThemedText>
               <TextInput
-                style={styles.modalInput}
-                placeholder="Ex: BL-12345 (Optionnel)"
-                value={deliveryNoteNumber}
-                onChangeText={setDeliveryNoteNumber}
-                autoFocus={true}
+                style={styles.searchInput}
+                placeholder="Rechercher un fournisseur..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
               />
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity 
-                  style={styles.modalSecondaryButton} 
-                  onPress={() => setIsDeliveryModalVisible(false)}
-                >
-                  <ThemedText style={styles.modalSecondaryButtonText}>Annuler</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.modalPrimaryButton} 
-                  onPress={() => {
-                    setIsDeliveryModalVisible(false);
-                    setStep('product');
-                  }}
-                >
-                  <ThemedText style={styles.modalPrimaryButtonText}>Continuer</ThemedText>
-                </TouchableOpacity>
-              </View>
             </View>
-          </KeyboardAvoidingView>
-        </Modal>
-
-        <TouchableOpacity 
-           style={[styles.secondaryButton, { marginTop: 10 }]} 
-           onPress={() => router.back()}
-        >
-          <ThemedText style={styles.secondaryButtonText}>Retour</ThemedText>
-        </TouchableOpacity>
+          }
+          ListFooterComponent={
+            <TouchableOpacity
+              style={[styles.secondaryButton, { marginTop: 10 }]}
+              onPress={() => router.back()}
+            >
+              <ThemedText style={styles.secondaryButtonText}>Retour</ThemedText>
+            </TouchableOpacity>
+          }
+          ListEmptyComponent={
+             <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <ThemedText style={{ color: '#94a3b8' }}>Aucun fournisseur trouvé</ThemedText>
+            </View>
+          }
+        />
       </View>
     );
   };
 
+  // --- MODIFIED: renderProductStep ---
   const renderProductStep = () => {
     const filteredProducts = data?.products.filter(p => {
       const matchCat = selectedCategory === null || p.category_id === selectedCategory.id;
@@ -384,73 +412,83 @@ export default function ReceptionScreen() {
       return matchCat && matchSearch;
     }) || [];
 
+    const renderProductItem = ({ item }: { item: Product }) => (
+      <TouchableOpacity
+        style={styles.itemCard}
+        onPress={() => {
+          setSelectedProduct(item);
+          loadProductDetails(item);
+        }}
+      >
+        <ThemedText style={styles.itemName}>{item.name}</ThemedText>
+        <IconSymbol name="plus.circle.fill" size={24} color={BeroColors.blue} />
+      </TouchableOpacity>
+    );
+
     return (
-      <View style={styles.stepContainer}>
-        <ThemedText style={styles.stepTitle}>2. Choisir le produit</ThemedText>
+      <View style={{ flex: 1 }}>
+        <FlatList
+          data={filteredProducts}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderProductItem}
+          contentContainerStyle={styles.stepContainer}
+          ListHeaderComponent={
+            <View>
+              <ThemedText style={styles.stepTitle}>2. Choisir le produit</ThemedText>
 
-        <View style={styles.searchRow}>
-          <View style={styles.searchContainer}>
-            <IconSymbol name="magnifyingglass" size={18} color="#94a3b8" />
-            <TextInput
-              style={styles.searchInputSmall}
-              placeholder="Rechercher un produit..."
-              value={productSearchQuery}
-              onChangeText={setProductSearchQuery}
-            />
-            {productSearchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setProductSearchQuery('')}>
-                <IconSymbol name="xmark.circle.fill" size={18} color="#cbd5e1" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+              <View style={styles.searchRow}>
+                <View style={styles.searchContainer}>
+                  <IconSymbol name="magnifyingglass" size={18} color="#94a3b8" />
+                  <TextInput
+                    style={styles.searchInputSmall}
+                    placeholder="Rechercher un produit..."
+                    value={productSearchQuery}
+                    onChangeText={setProductSearchQuery}
+                  />
+                  {productSearchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setProductSearchQuery('')}>
+                      <IconSymbol name="xmark.circle.fill" size={18} color="#cbd5e1" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
 
-        <View style={styles.categoryTabs}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4 }}>
-            <TouchableOpacity
-              style={[styles.tab, selectedCategory === null && styles.activeTab]}
-              onPress={() => setSelectedCategory(null)}
-            >
-              <ThemedText style={[styles.tabText, selectedCategory === null && styles.activeTabText]}>
-                Touts
-              </ThemedText>
+              <View style={styles.categoryTabs}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4 }}>
+                  <TouchableOpacity
+                    style={[styles.tab, selectedCategory === null && styles.activeTab]}
+                    onPress={() => setSelectedCategory(null)}
+                  >
+                    <ThemedText style={[styles.tabText, selectedCategory === null && styles.activeTabText]}>
+                      Touts
+                    </ThemedText>
+                  </TouchableOpacity>
+                  {data?.categories.map(c => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[styles.tab, selectedCategory?.id === c.id && styles.activeTab]}
+                      onPress={() => setSelectedCategory(c)}
+                    >
+                      <ThemedText style={[styles.tabText, selectedCategory?.id === c.id && styles.activeTabText]}>
+                        {c.name}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          }
+          ListFooterComponent={
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => setStep('supplier')}>
+              <ThemedText style={styles.secondaryButtonText}>Changer fournisseur</ThemedText>
             </TouchableOpacity>
-            {data?.categories.map(c => (
-              <TouchableOpacity
-                key={c.id}
-                style={[styles.tab, selectedCategory?.id === c.id && styles.activeTab]}
-                onPress={() => setSelectedCategory(c)}
-              >
-                <ThemedText style={[styles.tabText, selectedCategory?.id === c.id && styles.activeTabText]}>
-                  {c.name}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-        <ScrollView style={styles.list}>
-          {filteredProducts.map(p => (
-            <TouchableOpacity
-              key={p.id}
-              style={styles.itemCard}
-              onPress={() => {
-                setSelectedProduct(p);
-                loadProductDetails(p);
-              }}
-            >
-              <ThemedText style={styles.itemName}>{p.name}</ThemedText>
-              <IconSymbol name="plus.circle.fill" size={24} color={BeroColors.blue} />
-            </TouchableOpacity>
-          ))}
-          {filteredProducts.length === 0 && (
-            <View style={{ padding: 40, alignItems: 'center' }}>
+          }
+          ListEmptyComponent={
+            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
               <ThemedText style={{ color: '#94a3b8' }}>Aucun produit trouvé</ThemedText>
             </View>
-          )}
-        </ScrollView>
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => setStep('supplier')}>
-          <ThemedText style={styles.secondaryButtonText}>Changer fournisseur</ThemedText>
-        </TouchableOpacity>
+          }
+        />
       </View>
     );
   };
@@ -612,61 +650,78 @@ export default function ReceptionScreen() {
     </KeyboardAvoidingView>
   );
 
-  const renderSummaryStep = () => (
-    <View style={styles.stepContainer}>
-      <ThemedText style={styles.stepTitle}>Récapitulatif : {selectedSupplier?.name}</ThemedText>
-
-      <ScrollView style={styles.list}>
-        {receptionLines.map((line, idx) => {
-          const product = data?.products.find(p => p.id === line.product_id);
-          return (
-            <View key={idx} style={styles.lineItem}>
-              <View style={styles.lineHeader}>
-                <ThemedText style={styles.lineProductName}>{product?.name}</ThemedText>
-                <View style={styles.lineActions}>
-                  <TouchableOpacity onPress={() => editLine(idx)} style={styles.actionIcon}>
-                    <IconSymbol name="pencil" size={18} color={BeroColors.blue} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => removeLine(idx)} style={styles.actionIcon}>
-                    <IconSymbol name="trash.fill" size={18} color="#ef4444" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              <View style={styles.lineBody}>
-                <ThemedText style={[styles.lineBadge, line.is_compliant ? styles.compliantBadge : styles.nonCompliantBadge]}>
-                  {line.is_compliant ? 'Conforme' : 'Non-Conforme'}
-                </ThemedText>
-                <ThemedText style={styles.lineDetail}>
-                  Temp: {line.measured_temperature}°C | Lot: {line.lot_number || '-'}
-                </ThemedText>
-              </View>
+  // --- MODIFIED: renderSummaryStep ---
+  const renderSummaryStep = () => {
+    const renderLineItem = ({ item, index }: { item: ReceptionLine, index: number }) => {
+      const product = data?.products.find(p => p.id === item.product_id);
+      return (
+        <View style={styles.lineItem}>
+          <View style={styles.lineHeader}>
+            <ThemedText style={styles.lineProductName}>{product?.name}</ThemedText>
+            <View style={styles.lineActions}>
+              <TouchableOpacity onPress={() => editLine(index)} style={styles.actionIcon}>
+                <IconSymbol name="pencil" size={18} color={BeroColors.blue} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => removeLine(index)} style={styles.actionIcon}>
+                <IconSymbol name="trash.fill" size={18} color="#ef4444" />
+              </TouchableOpacity>
             </View>
-          );
-        })}
-      </ScrollView>
+          </View>
+          <View style={styles.lineBody}>
+            <ThemedText style={[styles.lineBadge, item.is_compliant ? styles.compliantBadge : styles.nonCompliantBadge]}>
+              {item.is_compliant ? 'Conforme' : 'Non-Conforme'}
+            </ThemedText>
+            <ThemedText style={styles.lineDetail}>
+              Temp: {item.measured_temperature}°C | Lot: {item.lot_number || '-'}
+            </ThemedText>
+          </View>
+        </View>
+      );
+    };
 
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={[styles.secondaryButton, { flex: 1 }]}
-          onPress={() => setStep('product')}
-        >
-          <ThemedText style={styles.secondaryButtonText}>+ Ajouter produit</ThemedText>
-        </TouchableOpacity>
+    return (
+      <View style={{ flex: 1 }}>
+        <FlatList
+          data={receptionLines}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={renderLineItem}
+          contentContainerStyle={styles.stepContainer}
+          ListHeaderComponent={
+            <ThemedText style={styles.stepTitle}>
+              Récapitulatif : {selectedSupplier?.name}
+            </ThemedText>
+          }
+          ListFooterComponent={
+            <View style={styles.bottomActions}>
+              <TouchableOpacity
+                style={[styles.secondaryButton, { flex: 1 }]}
+                onPress={() => setStep('product')}
+              >
+                <ThemedText style={styles.secondaryButtonText}>+ Ajouter produit</ThemedText>
+              </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.primaryButton, { flex: 2 }]}
-          onPress={submitReception}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <ThemedText style={styles.primaryButtonText}>Finaliser la réception</ThemedText>
-          )}
-        </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryButton, { flex: 2 }]}
+                onPress={submitReception}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <ThemedText style={styles.primaryButtonText}>Finaliser la réception</ThemedText>
+                )}
+              </TouchableOpacity>
+            </View>
+          }
+          ListEmptyComponent={
+             <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <ThemedText style={{ color: '#94a3b8' }}>Aucun produit ajouté</ThemedText>
+            </View>
+          }
+        />
       </View>
-    </View>
-  );
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -681,10 +736,32 @@ export default function ReceptionScreen() {
           </View>
         ) : (
           <>
-            {step === 'supplier' && renderSupplierStep()}
-            {step === 'product' && renderProductStep()}
-            {step === 'form' && renderFormStep()}
-            {step === 'summary' && renderSummaryStep()}
+            {isLargeScreen ? (
+              <View style={styles.desktopContainer}>
+                <View style={styles.column}>
+                  {renderSupplierStep()}
+                </View>
+
+                <View style={styles.column}>
+                  {renderProductStep()}
+                </View>
+
+                <View style={styles.column}>
+                  {renderFormStep()}
+                </View>
+
+                <View style={styles.column}>
+                  {renderSummaryStep()}
+                </View>
+              </View>
+            ) : (
+              <>
+                {step === 'supplier' && renderSupplierStep()}
+                {step === 'product' && renderProductStep()}
+                {step === 'form' && renderFormStep()}
+                {step === 'summary' && renderSummaryStep()}
+              </>
+            )}
           </>
         )}
       </SafeAreaProvider>
@@ -740,8 +817,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stepContainer: {
-    flex: 1,
     padding: 20,
+    paddingBottom: 40, // Extra padding for scroll end
   },
   stepTitle: {
     fontSize: 14,
@@ -1236,5 +1313,21 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 15,
     fontWeight: '800',
+  },
+
+  desktopContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 16,
+    padding: 10,
+  },
+
+  column: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
 });
