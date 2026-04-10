@@ -7,7 +7,7 @@ import { ThemedView } from '../components/themed-view';
 import { IconSymbol } from '../components/ui/icon-symbol';
 import { BeroColors } from '../constants/theme';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-
+import nettDesiApi from '../api/nett-desi';
 // Renommé en DashboardScreen pour clarté, mais c'est bien un export default
 export default function DashboardScreen() {
   const { signOut } = useAuth();
@@ -90,24 +90,24 @@ export default function DashboardScreen() {
       badgeIcon: 'fryer' as const,
       badgeColor: '#0891B2',
     },
-    {
-      key: 'temperature-control',
-      title: 'Contrôle Température',
-      route: '/temperature-control' as any,
-      icon: 'thermometer' as const,
-      iconColor: '#F43F5E',
-      iconBg: '#FEF2F2',
-      accent: '#F43F5E',
-      badgeIcon: 'temperature-high' as const,
-      badgeColor: '#F43F5E',
-    },
+   {
+     key: 'temperature-control',
+     title: 'Contrôle Température',
+     route: '/temperature-control' as any,
+     icon: 'thermometer' as const,
+     iconColor: '#F43F5E',
+     iconBg: '#FEF2F2',
+     accent: '#F43F5E',
+     badgeIcon: 'checkmark' as any,
+     badgeColor: '#F43F5E',
+   },
     // Nouveaux modules HACCP
     {
-      key: 'cleaning',
+      key: 'cleaning-disinfection',
       title: 'Nettoyage & Désinfection',
-      route: '/cleaning' as any,
-      icon: 'broom' as const,
-      iconColor: '#047857',
+      route: '/cleaning-disinfection' as any,
+      icon: 'trash.can' as const,
+      iconColor: '#0F766E',
       iconBg: '#DCFCE7',
       accent: '#047857',
     },
@@ -302,9 +302,9 @@ const styles = StyleSheet.create({
     height: 36,
     minWidth: 90,
     borderRadius: 999,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'red',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'black',
     paddingHorizontal: 16,
     flexDirection: 'row',
     gap: 8,
@@ -367,13 +367,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    borderWidth: 1,
+    borderWidth: 5,
   },
   subIconBadge: {
     position: 'absolute',
     bottom: -4,
     right: -4,
-    width: 26,
+    width: 50,
     height: 26,
     backgroundColor: '#fff',
     borderRadius: 13,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   tileTitle: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '800',
     textAlign: 'center',
     color: '#1E293B',
