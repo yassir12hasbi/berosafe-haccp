@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,7 +9,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Modal
+  Modal,
+  Dimensions
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ThemedText } from '../../components/themed-text';
@@ -24,137 +25,74 @@ import temperatureControlApi, {
 } from '../../api/temperature-control';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { getErrorDetails } from '../../utils/error';
+import { useAuth } from '../../context/auth-context'; // Assurez-vous que le chemin est correct
 
-interface SidebarProps {
-  data: TemperatureControlInitialData | null;
-  selectedZone: Zone | 'all';
-  setSelectedZone: (zone: Zone | 'all') => void;
-  filteredEquipments: Equipment[];
-  selectedEquipment: Equipment | null;
-  onSelectEquipment: (e: Equipment) => void;
-}
+// --- COULEURS ---
+const COLORS = {
+  brand: '#0284c7',
+  brandDark: '#0369a1',
+  success: '#22c55e',
+  danger: '#ef4444',
+  dangerBg: '#fef2f2',
+  bg: '#f3f4f6',
+  card: '#ffffff',
+  textMain: '#1f2937',
+  textMuted: '#6b7280',
+  border: '#e5e7eb'
+};
 
-const Sidebar = memo(({ data, selectedZone, setSelectedZone, filteredEquipments, selectedEquipment, onSelectEquipment }: SidebarProps) => {
-  return (
-    <View style={styles.sidebar}>
-      <ThemedText style={styles.sectionTitle}>1. Choisir l&apos;équipement</ThemedText>
+// --- COMPOSANTS UI ---
 
-      <View style={styles.zoneTabs}>
-         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
-            <TouchableOpacity
-              style={[styles.tab, selectedZone === 'all' && styles.activeTab]}
-              onPress={() => setSelectedZone('all')}
-            >
-              <ThemedText style={[styles.tabText, selectedZone === 'all' && styles.activeTabText]}>Toutes</ThemedText>
-            </TouchableOpacity>
-
-            {data?.zones.map(z => (
-              <TouchableOpacity
-                key={z.id}
-                style={[styles.tab, selectedZone !== 'all' && selectedZone?.id === z.id && styles.activeTab]}
-                onPress={() => setSelectedZone(z)}
-              >
-                <ThemedText style={[styles.tabText, selectedZone !== 'all' && selectedZone?.id === z.id && styles.activeTabText]}>{z.name}</ThemedText>
-              </TouchableOpacity>
-            ))}
-         </ScrollView>
-      </View>
-
-      <ScrollView style={styles.list}>
-         {filteredEquipments.map(f => {
-           const isSelected = selectedEquipment?.id === f.id;
-           const completedChecks = f.check_times.filter(c => c.already_done).length;
-           const totalChecks = f.check_times.length;
-           const isAllDone = completedChecks === totalChecks && totalChecks > 0;
-
-           return (
-             <TouchableOpacity
-               key={f.id}
-               style={[
-                 styles.itemCard,
-                 isSelected && styles.activeItemCard,
-                 isAllDone && styles.completedItemCard
-               ]}
-               onPress={() => onSelectEquipment(f)}
-               disabled={isAllDone && !isSelected}
-             >
-               <View style={styles.itemInfo}>
-                  <View style={[styles.iconBg, isSelected && styles.activeIconBg, isAllDone && styles.completedIconBg]}>
-                     <IconSymbol
-                       name="snowflake"
-                       size={24}
-                       color={isSelected || isAllDone ? '#fff' : BeroColors.blue}
-                     />
-                  </View>
-                  <View>
-                     <ThemedText style={[styles.itemName, isSelected && styles.activeItemName, isAllDone && styles.completedText]}>{f.code}</ThemedText>
-                     <ThemedText style={[styles.itemDesc, isSelected && styles.activeItemDesc, isAllDone && styles.completedText]}>
-                       {f.description || 'Frigo'}
-                       {selectedZone === 'all' && (
-                         <ThemedText style={[styles.zoneLabel, isAllDone && styles.completedText]}> • {data?.zones.find(z => z.equipments.some(e => e.id === f.id))?.name}</ThemedText>
-                       )}
-                     </ThemedText>
-                     <ThemedText style={[styles.progressText, isAllDone && styles.completedText]}>{completedChecks}/{totalChecks} relevés faits</ThemedText>
-                  </View>
-               </View>
-               {isAllDone ? (
-                  <IconSymbol name="checkmark" size={20} color={BeroColors.green} />
-               ) : (
-                  isSelected ? (
-                   <IconSymbol name="chevron.right" size={20} color={BeroColors.blue} />
-                  ) : (
-                   <IconSymbol name="chevron.right" size={20} color="#cbd5e1" />
-                  )
-               )}
-             </TouchableOpacity>
-           );
-         })}
-      </ScrollView>
-    </View>
-  );
-});
-
-// Select Composant
 const CustomSelect = ({
   label,
   options,
   selectedValue,
-  onSelect
+  onSelect,
+  isDanger = false
 }: {
   label: string,
   options: string[],
   selectedValue: string,
-  onSelect: (val: string) => void
+  onSelect: (val: string) => void,
+  isDanger?: boolean
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
 
   return (
     <View style={styles.selectWrapper}>
-      <ThemedText style={styles.selectLabel}>{label}</ThemedText>
-      <TouchableOpacity style={styles.selectButton} onPress={() => setModalVisible(true)}>
+      <ThemedText style={[styles.selectLabel, isDanger && styles.selectLabelDanger]}>{label}</ThemedText>
+      <TouchableOpacity
+        style={[
+          styles.selectButton,
+          isDanger && styles.selectButtonDanger
+        ]}
+        onPress={() => setModalVisible(true)}
+      >
         <ThemedText style={selectedValue ? styles.selectValueText : styles.selectPlaceholder}>
           {selectedValue || 'Au choix...'}
         </ThemedText>
-        <IconSymbol name="chevron.right" size={20} color="#94a3b8" />
+        <IconSymbol name="chevron.down" size={16} color={COLORS.textMuted} />
       </TouchableOpacity>
 
       <Modal visible={modalVisible} transparent animationType="fade">
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setModalVisible(false)}>
            <View style={styles.modalContent}>
               <ThemedText style={styles.modalTitle}>{label}</ThemedText>
-              {options.map((opt, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[styles.modalOption, selectedValue === opt && styles.modalOptionActive]}
-                  onPress={() => {
-                    onSelect(opt);
-                    setModalVisible(false);
-                  }}
-                >
-                  <ThemedText style={[styles.modalOptionText, selectedValue === opt && styles.modalOptionTextActive]}>{opt}</ThemedText>
-                  {selectedValue === opt && <IconSymbol name="checkmark" size={18} color={BeroColors.blue} />}
-                </TouchableOpacity>
-              ))}
+              <ScrollView style={{ maxHeight: 300 }}>
+                {options.map((opt, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.modalOption, selectedValue === opt && styles.modalOptionActive]}
+                    onPress={() => {
+                      onSelect(opt);
+                      setModalVisible(false);
+                    }}
+                  >
+                    <ThemedText style={[styles.modalOptionText, selectedValue === opt && styles.modalOptionTextActive]}>{opt}</ThemedText>
+                    {selectedValue === opt && <IconSymbol name="checkmark" size={18} color={COLORS.brand} />}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
            </View>
         </TouchableOpacity>
       </Modal>
@@ -162,8 +100,78 @@ const CustomSelect = ({
   );
 };
 
+const TimelineStep = ({
+  label,
+  time,
+  status,
+  onPress,
+  isLast,
+  recordedBy,
+  recordedAt
+}: {
+  label: string,
+  time: string,
+  status: 'done' | 'active' | 'pending',
+  onPress: () => void,
+  isLast?: boolean,
+  recordedBy?: string,
+  recordedAt?: string
+}) => {
+  let bgColor = '#f3f4f6';
+  let textColor = '#9ca3af';
+  let icon = null;
+
+  if (status === 'done') {
+    bgColor = COLORS.success;
+    textColor = COLORS.success;
+    icon = 'checkmark';
+  } else if (status === 'active') {
+    bgColor = COLORS.brand;
+    textColor = COLORS.brand;
+  }
+
+  // Formater l'heure réelle si disponible
+  const displayRecordTime = recordedAt
+    ? new Date(recordedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    : null;
+
+  return (
+    <View style={styles.timelineStepContainer}>
+      <TouchableOpacity
+        style={[styles.timelineCircle, { backgroundColor: bgColor, borderColor: status === 'active' ? '#fff' : 'transparent', borderWidth: status === 'active' ? 4 : 0 }]}
+        onPress={onPress}
+        disabled={status === 'done'}
+      >
+        {icon ? (
+          <IconSymbol name={icon} size={14} color="#fff" />
+        ) : (
+          <ThemedText style={[styles.timelineNumber, { color: status === 'active' ? '#fff' : COLORS.textMuted }]}>
+            {/* Afficher 'O' pour Ouverture si c'est le cas, sinon vide */}
+          </ThemedText>
+        )}
+      </TouchableOpacity>
+      <ThemedText style={[styles.timelineLabel, { color: textColor, fontWeight: status === 'active' ? '700' : '400' }]}>
+        {time}
+      </ThemedText>
+
+      {/* Affichage des infos de validation (Heure réelle + User) */}
+      {status === 'done' && (displayRecordTime || recordedBy) && (
+        <View style={styles.recordInfo}>
+            {displayRecordTime && <ThemedText style={styles.recordTimeText}>{displayRecordTime}</ThemedText>}
+            {recordedBy && <ThemedText style={styles.recordUserText}>Par: {recordedBy}</ThemedText>}
+        </View>
+      )}
+
+      {!isLast && <View style={styles.timelineConnector} />}
+    </View>
+  );
+};
+
+// --- ÉCRAN PRINCIPAL ---
+
 export default function TemperatureControlScreen() {
   const router = useRouter();
+  const { user } = useAuth(); // Récupération de l'utilisateur connecté
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -215,24 +223,23 @@ export default function TemperatureControlScreen() {
     }
   };
 
-  const parseLocalizedFloat = (val: string) => {
-    return parseFloat(val.replace(',', '.'));
+  // Fonction utilitaire pour trouver la zone d'un équipement
+  const findZoneForEquipment = (eqId: number): Zone | null => {
+    if (!data) return null;
+    return data.zones.find(z => z.equipments.some(e => e.id === eqId)) || null;
   };
 
-  const handleTempChange = (val: string) => {
-    setTemp(val.replace(',', '.'));
-  };
+  const parseLocalizedFloat = (val: string) => parseFloat(val.replace(',', '.'));
+
+  const handleTempChange = (val: string) => setTemp(val.replace(',', '.'));
 
   // Threshold Logic
   const isAnomalous = useMemo(() => {
     if (!selectedEquipment || temp === '') return false;
     const t = parseLocalizedFloat(temp);
     if (isNaN(t)) return false;
-
-    // Check ranges
     const min = selectedEquipment.min_temperature;
     const max = selectedEquipment.max_temperature;
-
     if (min !== null && t < min) return true;
     if (max !== null && t > max) return true;
     return false;
@@ -241,16 +248,17 @@ export default function TemperatureControlScreen() {
   const handleSelectEquipment = useCallback((e: Equipment) => {
     setSelectedEquipment(e);
 
-    // Reset Form
+    // --- CORRECTION 1 : Attribution automatique de la zone ---
+    const zone = findZoneForEquipment(e.id);
+    setSelectedZone(zone || 'all');
+
     setTemp('');
     setProbableCause('');
     setCorrectiveAction('');
     setComments('');
-
-    // Auto-select first not done check time
     const firstAvailable = e.check_times.find(c => !c.already_done);
     setSelectedCheckTime(firstAvailable || null);
-  }, []);
+  }, [data]); // Ajout de data dans les dépendances
 
   const resetForm = () => {
     setSelectedEquipment(null);
@@ -261,394 +269,559 @@ export default function TemperatureControlScreen() {
     setComments('');
   };
 
-  const handleSave = async () => {
-    if (!selectedEquipment || !selectedCheckTime) return;
+  // Vérification de la tolérance horaire (2 heures)
+  const isWithinTolerance = (targetTimeStr: string): boolean => {
+    const now = new Date();
+    const [hours, minutes] = targetTimeStr.split(':').map(Number);
+    const target = new Date();
+    target.setHours(hours, minutes, 0, 0);
 
-    if (temp.trim() === '') {
-      Alert.alert('Erreur', 'Veuillez saisir une température valide avant de valider.', [{ text: 'OK' }]);
-      return;
-    }
+    const diffMs = Math.abs(now.getTime() - target.getTime());
+    const diffMins = Math.floor(diffMs / 60000); // Conversion en minutes
 
-    const t = parseLocalizedFloat(temp);
-    if (isNaN(t)) {
-      Alert.alert('Erreur', 'Format de température invalide.', [{ text: 'OK' }]);
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-
-      await temperatureControlApi.storeControl({
-        equipment_id: selectedEquipment.id,
-        check_time_id: selectedCheckTime.id,
-        temperature: t,
-        probable_cause: isAnomalous ? probableCause : null,
-        corrective_action: isAnomalous ? correctiveAction : null,
-        comments: isAnomalous ? comments : null,
-      });
-
-      // Update local state to reflect that this check_time is now done
-      if (data) {
-        const newData = { ...data };
-        newData.zones.forEach(z => {
-          z.equipments.forEach(eq => {
-            if (eq.id === selectedEquipment.id) {
-              const ct = eq.check_times.find(c => c.id === selectedCheckTime.id);
-              if (ct) ct.already_done = true;
-            }
-          });
-        });
-        setData(newData);
-      }
-
-      resetForm();
-      Alert.alert('Succès', 'Relevé enregistré avec succès !', [{ text: 'OK' }]);
-
-    } catch (error: any) {
-      const isConflict = error?.response?.status === 409;
-      const msg = isConflict
-        ? "Un relevé pour ce créneau a déjà été enregistré aujourd'hui."
-        : "Echec de l'enregistrement.";
-      const { title, message } = getErrorDetails(error, 'Enregistrement impossible', msg);
-
-      console.error('Save Temp Error:', message);
-      Alert.alert(title, message);
-
-      if (isConflict) fetchInitialData();
-    } finally {
-      setIsSubmitting(false);
-    }
+    return diffMins <= 120; // 120 minutes = 2 heures
   };
+
+      const handleSave = async () => {
+        console.log("--- TENTATIVE D'ENREGISTREMENT ---");
+
+        // 1. Vérification Équipement
+        if (!selectedEquipment) {
+          Alert.alert('Erreur', 'Aucun équipement sélectionné.');
+          return;
+        }
+
+        // 2. Vérification Créneau (Si le bouton est grisé, c'est que ça échoue ici)
+        if (!selectedCheckTime) {
+          console.error("AUCUN CRENEAU DISPONIBLE ! Vérifiez les données de l'équipement.");
+          Alert.alert(
+            'Impossible d\'enregistrer',
+            'Il n\'y a aucun créneau horaire disponible ou non-effectué pour cet équipement aujourd\'hui. Vérifiez votre base de données.'
+          );
+          return;
+        }
+        console.log("Créneau sélectionné :", selectedCheckTime.label);
+
+        // 3. Vérification Température
+        if (temp.trim() === '') {
+          Alert.alert('Erreur', 'Veuillez saisir une température.');
+          return;
+        }
+        const t = parseLocalizedFloat(temp);
+        if (isNaN(t)) {
+          Alert.alert('Erreur', 'Température invalide.');
+          return;
+        }
+
+        // --- BLOCAGE HORAIRE (COMMENTÉ POUR TEST) ---
+        // Si vous voulez tester à n'importe quelle heure, gardez ce bloc en commentaire.
+        /*
+        if (!isWithinTolerance(selectedCheckTime.check_time)) {
+          Alert.alert(
+            'Hors tolérance',
+            `Il est ${new Date().toLocaleTimeString()}. Le créneau est ${selectedCheckTime.check_time}. Tolérance dépassée.`
+          );
+          return;
+        }
+        */
+
+        try {
+          setIsSubmitting(true);
+          console.log("Envoi API en cours...", {
+            equipment_id: selectedEquipment.id,
+            check_time_id: selectedCheckTime.id,
+            temperature: t
+          });
+
+          // Appel API
+          await temperatureControlApi.storeControl({
+            equipment_id: selectedEquipment.id,
+            check_time_id: selectedCheckTime.id,
+            temperature: t,
+            probable_cause: isAnomalous ? probableCause : null,
+            corrective_action: isAnomalous ? correctiveAction : null,
+            comments: isAnomalous ? comments : null,
+          });
+
+          console.log("SUCCÈS API reçu");
+
+          // Mise à jour locale immédiate
+          if (data) {
+            const newData = { ...data };
+            newData.zones.forEach(z => {
+              z.equipments.forEach(eq => {
+                if (eq.id === selectedEquipment.id) {
+                  const ct = eq.check_times.find(c => c.id === selectedCheckTime.id);
+                  if (ct) {
+                    ct.already_done = true;
+                    ct.recorded_by = user?.name || user?.first_name || 'Utilisateur';
+                    ct.recorded_at = new Date().toISOString();
+                    console.log("Mise à jour locale OK");
+                  }
+                }
+              });
+            });
+            setData(newData);
+          }
+
+          resetForm();
+          Alert.alert('Succès', 'Contrôle enregistré !', [{ text: 'OK' }]);
+
+        } catch (error: any) {
+          console.error("ECHEC API :", error);
+
+          // Affichage détaillé de l'erreur Laravel
+          let errorMsg = "Erreur inconnue";
+          if (error.response?.data?.message) {
+            errorMsg = error.response.data.message;
+          } else if (error.message) {
+            errorMsg = error.message;
+          }
+
+          Alert.alert('Erreur lors de la sauvegarde', errorMsg);
+
+          // Si 409 (Conflit), on recharge
+          if (error?.response?.status === 409) {
+            fetchInitialData();
+          }
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
 
   const filteredEquipments = useMemo(() => {
     if (!data) return [];
     if (selectedZone === 'all') {
-      return data.zones.reduce((acc, zone) => {
-        return [...acc, ...zone.equipments];
-      }, [] as Equipment[]);
+      return data.zones.reduce((acc, zone) => [...acc, ...zone.equipments], [] as Equipment[]);
     }
     return selectedZone.equipments;
   }, [data, selectedZone]);
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-       <View style={styles.headerTitleContainer}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-             <IconSymbol name="chevron.left" size={20} color={BeroColors.blue} />
-          </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Contrôle Températures</ThemedText>
-       </View>
-    </View>
-  );
+  // --- RENDERS ---
 
-  const renderFormContainer = () => {
-    if (!selectedEquipment) {
-      return (
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconBg}>
-            <IconSymbol name="snowflake" size={48} color="#94a3b8" />
-          </View>
-          <ThemedText style={styles.emptyTitle}>Aucun équipement sélectionné</ThemedText>
-          <ThemedText style={styles.emptySub}>Veuillez choisir un frigo ou chambre froide dans la liste à gauche pour commencer le contrôle.</ThemedText>
-        </View>
-      );
-    }
-
-    const allTimesDone = selectedEquipment.check_times.length > 0 && selectedEquipment.check_times.every(c => c.already_done);
-
+  if (loading) {
     return (
-      <View style={styles.formContainer}>
-        <ThemedText style={styles.sectionTitle}>2. Relevé : {selectedEquipment.code}</ThemedText>
-
-        <View style={styles.checkTimesRow}>
-          {selectedEquipment.check_times.map(ct => {
-            const isSelected = selectedCheckTime?.id === ct.id;
-            return (
-              <TouchableOpacity
-                key={ct.id}
-                style={[
-                  styles.timeCard,
-                  ct.already_done && styles.timeCardDone,
-                  isSelected && styles.timeCardActive
-                ]}
-                disabled={ct.already_done}
-                onPress={() => setSelectedCheckTime(ct)}
-              >
-                {ct.already_done ? (
-                   <IconSymbol name="checkmark" size={16} color={BeroColors.green} />
-                ) : (
-                   <IconSymbol name="calendar" size={16} color={isSelected ? '#fff' : '#64748b'} />
-                )}
-                <ThemedText style={[
-                  styles.timeCardLabel,
-                  ct.already_done && styles.timeCardLabelDone,
-                  isSelected && styles.timeCardLabelActive
-                ]}>{ct.label}</ThemedText>
-                <ThemedText style={[
-                  styles.timeCardValue,
-                  ct.already_done && styles.timeCardValueDone,
-                  isSelected && styles.timeCardValueActive
-                ]}>{ct.check_time.substring(0, 5)}</ThemedText>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {allTimesDone ? (
-          <View style={styles.allDoneBox}>
-             <IconSymbol name="checkmark" size={32} color={BeroColors.green} />
-             <ThemedText style={styles.allDoneTitle}>Tous les relevés sont effectués</ThemedText>
-             <ThemedText style={styles.allDoneDesc}>Cet équipement est à jour pour aujourd'hui.</ThemedText>
-          </View>
-        ) : (
-          <>
-            <View style={[styles.measureCard, isAnomalous && styles.criticalCard]}>
-               <View style={styles.measureHeader}>
-                 <ThemedText style={styles.measureLabel}>Température Relevée (°C)</ThemedText>
-                 <ThemedText style={styles.seuilBadge}>
-                   Min {selectedEquipment.min_temperature}°C / Max {selectedEquipment.max_temperature}°C
-                 </ThemedText>
-               </View>
-
-               <View style={styles.adjusterLarge}>
-                  <TouchableOpacity
-                    onPress={() => setTemp(t => {
-                      const val = parseLocalizedFloat(t);
-                      return (isNaN(val) ? 0 : val - 1).toString();
-                    })}
-                    style={styles.adjustBtnLarge}
-                  >
-                     <IconSymbol name="minus" size={24} color={BeroColors.blue} />
-                  </TouchableOpacity>
-                  <TextInput
-                    style={styles.measureInputLarge}
-                    keyboardType="numeric"
-                    value={temp}
-                    onChangeText={handleTempChange}
-                    placeholder="--"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setTemp(t => {
-                      const val = parseLocalizedFloat(t);
-                      return (isNaN(val) ? 0 : val + 1).toString();
-                    })}
-                    style={styles.adjustBtnLarge}
-                  >
-                     <IconSymbol name="plus" size={24} color={BeroColors.blue} />
-                  </TouchableOpacity>
-               </View>
-               {isAnomalous && (
-                  <ThemedText style={styles.criticalNote}>Température hors normes détectée !</ThemedText>
-               )}
-            </View>
-
-            {isAnomalous && (
-               <View style={styles.anomalyContainer}>
-                  <ThemedText style={styles.anomalyTitle}>Action requise (Anomalie)</ThemedText>
-
-                  <CustomSelect
-                    label="Cause Probable"
-                    options={CAUSE_OPTIONS}
-                    selectedValue={probableCause}
-                    onSelect={setProbableCause}
-                  />
-
-                  <CustomSelect
-                    label="Action Corrective Immédiate"
-                    options={ACTION_OPTIONS}
-                    selectedValue={correctiveAction}
-                    onSelect={setCorrectiveAction}
-                  />
-
-                  <View style={styles.selectWrapper}>
-                    <ThemedText style={styles.selectLabel}>Commentaires (Optionnel)</ThemedText>
-                    <TextInput
-                      style={styles.largeInput}
-                      multiline
-                      value={comments}
-                      onChangeText={setComments}
-                      placeholder="Détails supplémentaires..."
-                    />
-                  </View>
-               </View>
-            )}
-
-            <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                (!selectedCheckTime || isSubmitting) && styles.buttonDisabled
-              ]}
-              onPress={handleSave}
-              disabled={!selectedCheckTime || isSubmitting}
-            >
-               {isSubmitting ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.primaryButtonText}>Enregistrer le relevé</ThemedText>}
-            </TouchableOpacity>
-          </>
-        )}
-
-        <View style={{ height: 40 }} />
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={COLORS.brand} />
       </View>
     );
-  };
+  }
 
+  // Liste des équipements (Vue initiale)
+  if (!selectedEquipment) {
+    return (
+      <ThemedView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <SafeAreaProvider style={{ flex: 1 }}>
+          <View style={styles.header}>
+             <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+                <IconSymbol name="chevron.left" size={24} color="#fff" />
+             </TouchableOpacity>
+             <ThemedText style={styles.headerTitle}>Relevé Températures</ThemedText>
+             <TouchableOpacity style={styles.headerBtn}>
+                <IconSymbol name="list.bullet" size={24} color="#fff" />
+             </TouchableOpacity>
+          </View>
+
+          <View style={styles.sectionHeader}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.zoneScroll}>
+              <TouchableOpacity
+                style={[styles.zoneChip, selectedZone === 'all' && styles.zoneChipActive]}
+                onPress={() => setSelectedZone('all')}
+              >
+                <ThemedText style={[styles.zoneChipText, selectedZone === 'all' && styles.zoneChipTextActive]}>Toutes Zones</ThemedText>
+              </TouchableOpacity>
+              {data?.zones.map(z => (
+                <TouchableOpacity
+                  key={z.id}
+                  style={[styles.zoneChip, selectedZone?.id === z.id && styles.zoneChipActive]}
+                  onPress={() => setSelectedZone(z)}
+                >
+                  <ThemedText style={[styles.zoneChipText, selectedZone?.id === z.id && styles.zoneChipTextActive]}>{z.name}</ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <ScrollView style={styles.listContainer} contentContainerStyle={styles.listContent}>
+            {filteredEquipments.map(eq => {
+               const doneCount = eq.check_times.filter(c => c.already_done).length;
+               const totalCount = eq.check_times.length;
+               const isComplete = doneCount === totalCount && totalCount > 0;
+
+               return (
+                 <TouchableOpacity
+                   key={eq.id}
+                   style={[styles.eqCard, isComplete && styles.eqCardDone]}
+                   onPress={() => handleSelectEquipment(eq)}
+                 >
+                    <View style={styles.eqInfo}>
+                       <ThemedText style={styles.eqCode}>{eq.code}</ThemedText>
+                       <ThemedText style={styles.eqDesc}>{eq.description || 'Équipement'}</ThemedText>
+                    </View>
+                    <View style={styles.eqStatus}>
+                       <ThemedText style={styles.eqStatusText}>{doneCount}/{totalCount}</ThemedText>
+                       {isComplete ? <IconSymbol name="checkmark.circle.fill" size={24} color={COLORS.success} /> : <IconSymbol name="chevron.right" size={24} color={COLORS.textMuted} />}
+                    </View>
+                 </TouchableOpacity>
+               );
+            })}
+          </ScrollView>
+        </SafeAreaProvider>
+      </ThemedView>
+    );
+  }
+
+  // --- VUE FORMULAIRE ---
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaProvider style={{ flex: 1 }}>
-        {renderHeader()}
-        {loading && !data ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={BeroColors.blue} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+
+          <View style={styles.header}>
+             <TouchableOpacity onPress={resetForm} style={styles.headerBtn}>
+                <IconSymbol name="chevron.left" size={24} color="#fff" />
+             </TouchableOpacity>
+             <ThemedText style={styles.headerTitle}>Relevé Températures</ThemedText>
+             <View style={{width: 24}} />
           </View>
-        ) : (
-          <View style={styles.splitContainer}>
-             <Sidebar
-               data={data}
-               selectedZone={selectedZone}
-               setSelectedZone={setSelectedZone}
-               filteredEquipments={filteredEquipments}
-               selectedEquipment={selectedEquipment}
-               onSelectEquipment={handleSelectEquipment}
-             />
-             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.formArea}>
-               <ScrollView style={{ flex: 1 }}>
-                 {renderFormContainer()}
-               </ScrollView>
-             </KeyboardAvoidingView>
+
+          <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+
+            {/* 1. Localisation (Zone Auto) */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <ThemedText style={styles.cardHeaderLabel}>Localisation</ThemedText>
+                <View style={styles.badge}>
+                  <ThemedText style={styles.badgeText}>Froid Positif (+)</ThemedText>
+                </View>
+              </View>
+
+              {/* Affichage dynamique de la zone (Read-only) */}
+              <View style={styles.zoneDisplayRow}>
+                <ThemedText style={styles.zoneDisplayLabel}>Zone :</ThemedText>
+                <ThemedText style={styles.zoneDisplayValue}>
+                  {selectedZone === 'all' ? 'Non assignée' : (selectedZone as Zone).name}
+                </ThemedText>
+              </View>
+
+              <View style={styles.eqDetailBox}>
+                 <View>
+                    <ThemedText style={styles.eqDetailName}>{selectedEquipment.description || selectedEquipment.code}</ThemedText>
+                    <ThemedText style={styles.eqDetailCode}>Code : {selectedEquipment.code}</ThemedText>
+                 </View>
+                 <View style={styles.targetBox}>
+                    <ThemedText style={styles.targetLabel}>Cible</ThemedText>
+                    <ThemedText style={styles.targetValue}>{selectedEquipment.min_temperature}°C à {selectedEquipment.max_temperature}°C</ThemedText>
+                 </View>
+              </View>
+            </View>
+
+            {/* 2. Timeline avec Infos User/Heure */}
+            <View style={styles.card}>
+              <ThemedText style={styles.sectionTitle}><IconSymbol name="clock" size={14} /> Contrôles du jour</ThemedText>
+
+              <View style={styles.timelineContainer}>
+                <View style={styles.timelineLine} />
+                {selectedEquipment.check_times.map((ct, index) => {
+                   const status = ct.already_done ? 'done' : (selectedCheckTime?.id === ct.id ? 'active' : 'pending');
+                   return (
+                     <TimelineStep
+                       key={ct.id}
+                       label={ct.label}
+                       time={ct.check_time.substring(0, 5)}
+                       status={status}
+                       recordedBy={ct.recorded_by} // Affichage du nom user
+                       recordedAt={ct.recorded_at} // Affichage heure réelle
+                       onPress={() => !ct.already_done && setSelectedCheckTime(ct)}
+                       isLast={index === selectedEquipment.check_times.length - 1}
+                     />
+                   );
+                })}
+              </View>
+              <ThemedText style={styles.timelineInfo}>Tolérance de saisie : ± 2 heures</ThemedText>
+            </View>
+
+            {/* 3. Température Relevée */}
+            <View style={styles.card}>
+              <ThemedText style={styles.inputLabel}>Température relevée actuellement</ThemedText>
+
+              <View style={styles.tempControlRow}>
+                <TouchableOpacity
+                  style={styles.tempBtn}
+                  onPress={() => setTemp(t => {
+                    const val = parseLocalizedFloat(t);
+                    return (isNaN(val) ? 0 : val - 1).toString();
+                  })}
+                >
+                  <IconSymbol name="minus" size={24} color={COLORS.textMain} />
+                </TouchableOpacity>
+
+                <View style={styles.tempInputWrapper}>
+                  <TextInput
+                    style={styles.tempInput}
+                    keyboardType="decimal-pad"
+                    value={temp}
+                    onChangeText={handleTempChange}
+                    placeholder="--"
+                    placeholderTextColor={COLORS.textMuted}
+                  />
+                  <ThemedText style={styles.tempUnit}>°C</ThemedText>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.tempBtn}
+                  onPress={() => setTemp(t => {
+                    const val = parseLocalizedFloat(t);
+                    return (isNaN(val) ? 0 : val + 1).toString();
+                  })}
+                >
+                  <IconSymbol name="plus" size={24} color={COLORS.textMain} />
+                </TouchableOpacity>
+              </View>
+
+              {isAnomalous && (
+                <View style={styles.alertBox}>
+                  <IconSymbol name="exclamationmark.triangle.fill" size={20} color={COLORS.danger} />
+                  <View style={styles.alertContent}>
+                    <ThemedText style={styles.alertTitle}>Température non conforme !</ThemedText>
+                    <ThemedText style={styles.alertText}>
+                      La limite est {selectedEquipment.max_temperature}°C. Veuillez remplir la fiche d'anomalie.
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* 4. Formulaire Anomalie */}
+            {isAnomalous && (
+              <View style={[styles.card, styles.anomalyCard]}>
+                <ThemedText style={styles.anomalyHeaderTitle}><IconSymbol name="doc.text.fill" size={16} /> Fiche de Non-Conformité</ThemedText>
+
+                <CustomSelect
+                  label="Cause probable"
+                  options={CAUSE_OPTIONS}
+                  selectedValue={probableCause}
+                  onSelect={setProbableCause}
+                  isDanger={true}
+                />
+
+                <CustomSelect
+                  label="Action corrective immédiate"
+                  options={ACTION_OPTIONS}
+                  selectedValue={correctiveAction}
+                  onSelect={setCorrectiveAction}
+                  isDanger={true}
+                />
+
+                <View style={styles.selectWrapper}>
+                  <ThemedText style={[styles.selectLabel, styles.selectLabelDanger]}>Commentaire / Visa</ThemedText>
+                  <TextInput
+                    style={[styles.textArea, styles.textAreaDanger]}
+                    placeholder="Précisez la situation..."
+                    placeholderTextColor="#9ca3af"
+                    value={comments}
+                    onChangeText={setComments}
+                    multiline
+                  />
+                </View>
+              </View>
+            )}
+
+             <View style={{ height: 100 }} />
+          </ScrollView>
+
+          {/* Footer Bouton */}
+          <View style={styles.footer}>
+             <TouchableOpacity
+               style={[styles.footerBtn, isAnomalous && styles.footerBtnDanger]}
+               onPress={handleSave}
+               disabled={!selectedCheckTime || isSubmitting}
+             >
+               {isSubmitting ? (
+                 <ActivityIndicator color="#fff" />
+               ) : (
+                 <>
+                   <IconSymbol name={isAnomalous ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"} size={20} color="#fff" />
+                   <ThemedText style={styles.footerBtnText}>
+                     {isAnomalous ? 'Enregistrer avec anomalie' : 'Enregistrer le contrôle'}
+                   </ThemedText>
+                 </>
+               )}
+             </TouchableOpacity>
           </View>
-        )}
+
+        </KeyboardAvoidingView>
       </SafeAreaProvider>
     </ThemedView>
   );
 }
 
+// --- STYLES ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
   header: {
-    paddingHorizontal: 20,
+    backgroundColor: COLORS.brand,
     paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  headerTitleContainer: { flexDirection: 'row', alignItems: 'center' },
-  backButton: { padding: 8, marginLeft: -8 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: BeroColors.dark, marginLeft: 8 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  splitContainer: { flex: 1, flexDirection: 'row' },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { width: 320, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width:0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: BeroColors.dark, marginBottom: 16, textAlign: 'center' },
-  modalOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 12, backgroundColor: '#f8fafc', marginBottom: 8 },
-  modalOptionActive: { backgroundColor: '#eff6ff' },
-  modalOptionText: { fontSize: 15, fontWeight: '600', color: '#64748b' },
-  modalOptionTextActive: { color: BeroColors.blue },
-
-  sidebar: {
-    width: '35%',
-    maxWidth: 400,
-    minWidth: 300,
-    backgroundColor: '#f1f5f9',
-    borderRightWidth: 1,
-    borderRightColor: '#e2e8f0',
-    padding: 20,
-  },
-  formArea: { flex: 1, backgroundColor: '#fff' },
-  formContainer: { padding: 24, flex: 1 },
-
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-    marginTop: 80,
-  },
-  emptyIconBg: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#64748b', marginBottom: 12 },
-  emptySub: { fontSize: 14, color: '#94a3b8', textAlign: 'center', lineHeight: 22 },
-
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: 20 },
-
-  zoneTabs: { marginBottom: 20 },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fff', borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: '#e2e8f0' },
-  activeTab: { backgroundColor: BeroColors.blue, borderColor: BeroColors.blue },
-  tabText: { fontSize: 14, fontWeight: '700', color: '#64748b' },
-  activeTabText: { color: '#fff' },
-
-  list: { flex: 1 },
-  itemCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
+    paddingHorizontal: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 10,
   },
-  activeItemCard: { borderColor: BeroColors.blue, backgroundColor: '#eff6ff' },
-  completedItemCard: { borderColor: '#e2e8f0', backgroundColor: '#f8fafc', opacity: 0.8 },
-  itemInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBg: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center' },
-  activeIconBg: { backgroundColor: BeroColors.blue },
-  completedIconBg: { backgroundColor: '#f1f5f9' },
-  itemName: { fontSize: 16, fontWeight: '800', color: BeroColors.dark },
-  activeItemName: { color: BeroColors.blue },
-  itemDesc: { fontSize: 12, color: '#94a3b8' },
-  zoneLabel: { color: '#64748b', fontStyle: 'italic' },
-  activeItemDesc: { color: '#64748b' },
-  progressText: { fontSize: 11, fontWeight: '700', color: BeroColors.green, marginTop: 4 },
-  completedText: { color: '#94a3b8' },
+  headerBtn: { padding: 8 },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
 
-  checkTimesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  timeCard: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 16 },
-  timeCardActive: { backgroundColor: BeroColors.blue, borderColor: BeroColors.blue },
-  timeCardDone: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', opacity: 0.7 },
-  timeCardLabel: { fontSize: 15, fontWeight: '800', color: BeroColors.dark },
-  timeCardLabelActive: { color: '#fff' },
-  timeCardLabelDone: { color: BeroColors.green },
-  timeCardValue: { fontSize: 14, color: '#64748b', fontWeight: '600' },
-  timeCardValueActive: { color: '#bfdbfe' },
-  timeCardValueDone: { color: '#22c55e' },
+  sectionHeader: { backgroundColor: '#fff', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  zoneScroll: { paddingHorizontal: 16, gap: 10 },
+  zoneChip: {
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderRadius: 20, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: '#fff'
+  },
+  zoneChipActive: { backgroundColor: COLORS.brand, borderColor: COLORS.brand },
+  zoneChipText: { fontSize: 14, fontWeight: '600', color: COLORS.textMuted },
+  zoneChipTextActive: { color: '#fff' },
 
-  allDoneBox: { backgroundColor: '#f0fdf4', borderRadius: 20, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: '#bbf7d0', marginTop: 20 },
-  allDoneTitle: { fontSize: 18, fontWeight: '800', color: BeroColors.green, marginTop: 12, marginBottom: 6 },
-  allDoneDesc: { fontSize: 14, color: '#166534', textAlign: 'center' },
+  listContainer: { flex: 1 },
+  listContent: { padding: 16, gap: 12 },
+  eqCard: {
+    backgroundColor: '#fff', borderRadius: 12, padding: 16,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2
+  },
+  eqCardDone: { opacity: 0.7, backgroundColor: '#f9fafb' },
+  eqInfo: { flex: 1 },
+  eqCode: { fontSize: 16, fontWeight: '800', color: COLORS.textMain },
+  eqDesc: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+  eqStatus: { alignItems: 'center' },
+  eqStatusText: { fontSize: 12, fontWeight: 'bold', color: COLORS.textMuted, marginBottom: 4 },
 
-  measureCard: { backgroundColor: '#fff', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 24 },
-  criticalCard: { borderColor: '#ef4444', backgroundColor: '#fef2f2' },
-  measureHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  measureLabel: { fontSize: 14, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' },
-  seuilBadge: { backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, fontSize: 12, fontWeight: '800', color: '#64748b', overflow: 'hidden' },
+  scrollContainer: { flex: 1 },
+  scrollContent: { padding: 16, gap: 20 },
 
-  adjusterLarge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8fafc', borderRadius: 20, padding: 12 },
-  adjustBtnLarge: { width: 64, height: 64, backgroundColor: '#fff', borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  measureInputLarge: { flex: 1, fontSize: 42, fontWeight: '900', color: BeroColors.dark, textAlign: 'center' },
-  criticalNote: { color: '#ef4444', fontSize: 14, fontWeight: '900', textAlign: 'center', marginTop: 20 },
+  card: {
+    backgroundColor: '#fff', borderRadius: 16, padding: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2,
+    borderWidth: 1, borderColor: '#f3f4f6'
+  },
 
-  anomalyContainer: { backgroundColor: '#fff', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: '#fee2e2', marginBottom: 24 },
-  anomalyTitle: { fontSize: 16, fontWeight: '900', color: '#ef4444', textTransform: 'uppercase', marginBottom: 20 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  cardHeaderLabel: { fontSize: 12, fontWeight: 'bold', color: COLORS.textMuted, textTransform: 'uppercase' },
+  badge: { backgroundColor: '#dbeafe', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 },
+  badgeText: { fontSize: 11, fontWeight: 'bold', color: COLORS.brand },
+
+  // Zone Display (Read-only)
+  zoneDisplayRow: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
+    borderBottomWidth: 2, borderBottomColor: COLORS.border, marginBottom: 16
+  },
+  zoneDisplayLabel: { fontSize: 15, fontWeight: '600', color: COLORS.textMain },
+  zoneDisplayValue: { fontSize: 15, fontWeight: 'bold', color: COLORS.brand, marginLeft: 8 },
+
+  eqDetailBox: {
+    backgroundColor: COLORS.bg, padding: 12, borderRadius: 8,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'
+  },
+  eqDetailName: { fontSize: 15, fontWeight: 'bold', color: COLORS.textMain },
+  eqDetailCode: { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontFamily: 'monospace' },
+  targetBox: { alignItems: 'center' },
+  targetLabel: { fontSize: 10, color: COLORS.textMuted },
+  targetValue: { fontSize: 13, fontWeight: 'bold', color: COLORS.success },
+
+  sectionTitle: { fontSize: 14, fontWeight: '600', color: COLORS.textMuted, marginBottom: 16 },
+  timelineContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', paddingVertical: 10 },
+  timelineLine: {
+    position: 'absolute', top: 18, left: 20, right: 20, height: 2,
+    backgroundColor: '#e5e7eb', zIndex: 0
+  },
+  timelineStepContainer: { alignItems: 'center', zIndex: 1, width: 50 },
+  timelineCircle: {
+    width: 32, height: 32, borderRadius: 16,
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2
+  },
+  timelineNumber: { fontSize: 14, fontWeight: 'bold' },
+  timelineLabel: { fontSize: 11, marginTop: 6, marginBottom: 2 },
+  recordInfo: { alignItems: 'center', marginTop: 4 },
+  recordTimeText: { fontSize: 10, color: COLORS.success, fontWeight: 'bold' },
+  recordUserText: { fontSize: 9, color: COLORS.textMuted, fontStyle: 'italic' },
+  timelineConnector: { display: 'none' },
+  timelineInfo: { textAlign: 'center', fontSize: 10, color: '#9ca3af', marginTop: 8 },
+
+  inputLabel: { fontSize: 14, fontWeight: '600', color: COLORS.textMain, marginBottom: 20, textAlign: 'center' },
+  tempControlRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
+  tempBtn: {
+    width: 48, height: 48, borderRadius: 24, backgroundColor: '#f3f4f6',
+    justifyContent: 'center', alignItems: 'center'
+  },
+  tempInputWrapper: {
+    flexDirection: 'row', alignItems: 'flex-end', borderBottomWidth: 2,
+    borderBottomColor: COLORS.border, width: 120, justifyContent: 'center'
+  },
+  tempInput: {
+    fontSize: 36, fontWeight: '900', color: COLORS.textMain, textAlign: 'center',
+    padding: 0, height: 50, width: 80
+  },
+  tempUnit: { fontSize: 20, color: COLORS.textMuted, marginBottom: 8, marginLeft: 4 },
+
+  alertBox: {
+    flexDirection: 'row', backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca',
+    borderRadius: 8, padding: 12, marginTop: 16, alignItems: 'flex-start', gap: 12
+  },
+  alertContent: { flex: 1 },
+  alertTitle: { fontSize: 12, fontWeight: 'bold', color: '#b91c1c', marginBottom: 2 },
+  alertText: { fontSize: 11, color: '#b91c1c', lineHeight: 16 },
+
+  anomalyCard: { backgroundColor: COLORS.dangerBg, borderColor: '#fecaca' },
+  anomalyHeaderTitle: { fontSize: 14, fontWeight: 'bold', color: '#b91c1c', marginBottom: 16, textTransform: 'uppercase' },
 
   selectWrapper: { marginBottom: 16 },
-  selectLabel: { fontSize: 12, fontWeight: '800', color: '#64748b', marginBottom: 8, textTransform: 'uppercase' },
-  selectButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 14, padding: 16 },
-  selectPlaceholder: { fontSize: 15, color: '#94a3b8' },
-  selectValueText: { fontSize: 15, fontWeight: '700', color: BeroColors.dark },
+  selectLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6, textTransform: 'uppercase' },
+  selectLabelDanger: { color: '#b91c1c' },
+  selectButton: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#fff', borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 12
+  },
+  selectButtonDanger: { borderColor: '#fecaca', backgroundColor: '#fff' },
+  selectPlaceholder: { fontSize: 14, color: COLORS.textMuted },
+  selectValueText: { fontSize: 14, fontWeight: '600', color: COLORS.textMain },
+  textArea: {
+    backgroundColor: '#fff', borderWidth: 1, borderColor: COLORS.border, borderRadius: 8,
+    padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: 'top'
+  },
+  textAreaDanger: { borderColor: '#fecaca', backgroundColor: '#fff' },
 
-  largeInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 14, padding: 16, fontSize: 15, color: BeroColors.dark, minHeight: 100, textAlignVertical: 'top' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '100%', maxHeight: '80%' },
+  modalTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.textMain, marginBottom: 12, textAlign: 'center' },
+  modalOption: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 12, backgroundColor: '#f9fafb', borderRadius: 8, marginBottom: 8
+  },
+  modalOptionActive: { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: COLORS.brand },
+  modalOptionText: { fontSize: 14, color: COLORS.textMain },
+  modalOptionTextActive: { color: COLORS.brand, fontWeight: '600' },
 
-  primaryButton: { backgroundColor: '#13385E', padding: 22, borderRadius: 24, alignItems: 'center', shadowColor: '#13385E', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 8 },
-  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '900', textTransform: 'uppercase' },
-  buttonDisabled: { backgroundColor: '#94a3b8', shadowOpacity: 0 }
+  footer: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: COLORS.border,
+    padding: 16, paddingBottom: Platform.OS === 'ios' ? 30 : 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 10
+  },
+  footerBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: COLORS.brand, paddingVertical: 14, borderRadius: 12,
+    shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4
+  },
+  footerBtnDanger: { backgroundColor: COLORS.danger, shadowColor: COLORS.danger },
+  footerBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold', textTransform: 'uppercase' }
 });

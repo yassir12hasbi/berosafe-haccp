@@ -6,6 +6,10 @@ export interface TemperatureCheckTime {
   check_time: string;
   tolerance_minutes: number;
   already_done: boolean;
+  // AJOUT IMPORTANT : Ces champs sont utilisés par le composant React Native
+  // pour afficher qui a validé et à quelle heure réelle après l'enregistrement.
+  recorded_by?: string | null;
+  recorded_at?: string | null;
 }
 
 export interface Equipment {
@@ -47,11 +51,14 @@ export interface TemperatureControlResponse {
 
 const temperatureControlApi = {
   getInitialData: async (): Promise<TemperatureControlInitialData> => {
+    // Si votre client n'a PAS de baseURL avec /api/v1, vous devez l'ajouter ici :
+    // ex: apiClient.get('/api/v1/temperature-control/init-data')
     const response = await apiClient.get<TemperatureControlInitialData>('/temperature-control/init-data');
     return response.data;
   },
 
   storeControl: async (payload: StoreTemperatureControlPayload): Promise<TemperatureControlResponse> => {
+    // Idem ici : Vérifiez que l'URL est complète ou gérée par le client
     const response = await apiClient.post<TemperatureControlResponse>('/temperature-control/store', payload);
     return response.data;
   }

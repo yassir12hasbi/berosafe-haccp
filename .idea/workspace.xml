@@ -5,13 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b0fcb66a-0406-4617-b92b-36164c4582f2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/(auth)/login.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/(auth)/login.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/oil-control/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/oil-control/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/reception/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/reception/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/traceability/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/traceability/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/api/oil-control.ts" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/api/oil-control.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/api/temperature-control.ts" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/api/temperature-control.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/temperature-control/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/haccp-app-module-controleRecep/app/temperature-control/index.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,10 +22,10 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "customColor": "",
-  "associatedIndex": 1
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 1
+}</component>
   <component name="ProjectId" id="3C7teRB5Jpw1TsSbZQFyyUqZC8f" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -37,11 +35,12 @@
   "keyToString": {
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "origin/V1__APP",
+    "git-widget-placeholder": "reception",
     "kotlin-language-version-configured": "true",
     "settings.editor.selected.configurable": "preferences.general",
     "show.migrate.to.gradle.popup": "false"
