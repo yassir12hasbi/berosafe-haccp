@@ -151,7 +151,7 @@ function SectionTitle({ label, icon }: { label: string; icon?: React.ReactNode }
 }
 
 // ─── CELERY RULE helper ───────────────────────────────────────────────────────
-const CELERY_IDS = ['L4']; // Mettez à jour selon votre API
+const CELERY_IDS = ['L4'];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function DisinfectionScreen() {
@@ -171,6 +171,7 @@ export default function DisinfectionScreen() {
   // ── Modal add product ──────────────────────────────────────────────────────
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newProdName, setNewProdName]             = useState('');
+  const [newProdCategory, setNewProdCategory]     = useState<'Légumes' | 'Fruits'>('Légumes'); // État pour choisir la catégorie
 
   // ── Protocol ──────────────────────────────────────────────────────────────
   const [timer, setTimer]             = useState(8);
@@ -213,8 +214,14 @@ export default function DisinfectionScreen() {
 
   const handleAddProduct = () => {
     if (!newProdName.trim() || !catalog) return;
-    const newId = 'FL' + Date.now(); // FL pour Fruits & Légumes
-    setCatalog(prev => prev ? { ...prev, 'Légumes': [...prev['Légumes'], { id: newId, name: newProdName.trim() }] } : null);
+    const newId = 'FL' + Date.now();
+
+    // Ajout dans la bonne catégorie sélectionnée dans le modal
+    setCatalog(prev => prev ? {
+      ...prev,
+      [newProdCategory]: [...prev[newProdCategory], { id: newId, name: newProdName.trim() }]
+    } : null);
+
     setIsAddModalVisible(false);
     setNewProdName('');
   };
@@ -239,19 +246,24 @@ export default function DisinfectionScreen() {
     try {
       const allProducts = [...(catalog['Légumes'] ?? []), ...(catalog['Fruits'] ?? [])];
       await frVegApi.saveProtocol({
-        date: new Date().toISOString(),
+        date_time: new Date().toISOString(),
         products: selectedProducts.map(id => {
           const product = allProducts.find(p => p.id === id);
-          return { id, name: product?.name ?? 'Inconnu', qty: quantities[id] ?? '0' };
+          return {
+            desi_product_id: id,
+            quantity_kg: quantities[id] ?? '0',
+            name: product?.name ?? 'Inconnu',
+          };
         }),
-        lavage: washChecked,
-        rincage: rinseChecked,
-        timer,
-        chlorinePpm: selectedPpm,
+        is_washed: washChecked,
+        is_rinsed: rinseChecked,
+        soaking_time_minutes: timer,
+        chlorine_ppm: selectedPpm,
         checklist,
         comment,
         user: 'Chef',
       });
+
       Alert.alert('Succès', 'Protocole enregistré avec succès !');
       resetProtocol();
     } catch {
@@ -322,13 +334,11 @@ export default function DisinfectionScreen() {
       <View style={st.leftPanel}>
         <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Rechercher un produit..." />
 
-        {/* Add product button */}
         <TouchableOpacity style={st.btnAddProduct} onPress={() => setIsAddModalVisible(true)} activeOpacity={0.8}>
           <IcoPlus size={14} color={C.navy} />
           <ThemedText style={st.btnAddProductText}>Ajouter un produit</ThemedText>
         </TouchableOpacity>
 
-        {/* Celery warning */}
         {showCeleryWarning && (
           <View style={st.warningBox}>
             <IcoWarning size={13} color={C.orange} />
@@ -403,8 +413,6 @@ export default function DisinfectionScreen() {
           {/* ── Protocole ── */}
           <View style={st.section}>
             <SectionTitle label="Protocole de désinfection" />
-
-            {/* Step 1: Lavage */}
             <TouchableOpacity style={[st.stepCard, washChecked && st.stepCardDone]} onPress={() => setWashChecked(v => !v)} activeOpacity={0.8}>
               <View style={st.stepLeft}>
                 <View style={st.stepBadge}><ThemedText style={st.stepNum}>1</ThemedText></View>
@@ -418,7 +426,6 @@ export default function DisinfectionScreen() {
               </View>
             </TouchableOpacity>
 
-            {/* Step 2: Timer */}
             <View style={st.stepCard}>
               <View style={st.stepLeft}>
                 <View style={st.stepBadge}><ThemedText style={st.stepNum}>2</ThemedText></View>
@@ -443,7 +450,6 @@ export default function DisinfectionScreen() {
               </View>
             </View>
 
-            {/* Step 3: Rinçage */}
             <TouchableOpacity style={[st.stepCard, rinseChecked && st.stepCardDone]} onPress={() => setRinseChecked(v => !v)} activeOpacity={0.8}>
               <View style={st.stepLeft}>
                 <View style={st.stepBadge}><ThemedText style={st.stepNum}>3</ThemedText></View>
@@ -598,7 +604,6 @@ export default function DisinfectionScreen() {
             <ThemedText style={st.headerSub}>Fruits & Légumes · HACCP</ThemedText>
           </View>
         </View>
-        {/* Selection counter */}
         {selectedProducts.length > 0 && (
           <View style={st.headerCounter}>
             <ThemedText style={st.headerCounterText}>{selectedProducts.length}</ThemedText>
@@ -614,7 +619,6 @@ export default function DisinfectionScreen() {
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          {/* Mobile: show left panel when nothing selected, right panel otherwise */}
           {selectedProducts.length === 0 ? renderLeftPanel() : renderRightPanel()}
         </View>
       )}
@@ -637,12 +641,31 @@ export default function DisinfectionScreen() {
                 <ThemedText style={st.fieldLabel}>Nom du produit</ThemedText>
                 <TextInput
                   style={st.modalInput}
-                  placeholder="Ex: Aubergines"
+                  placeholder="Ex: Banane, Aubergine..."
                   placeholderTextColor={C.slate400}
                   value={newProdName}
                   onChangeText={setNewProdName}
                   autoFocus
                 />
+              </View>
+
+              {/* AJOUT: Sélecteur de catégorie */}
+              <View>
+                <ThemedText style={st.fieldLabel}>Catégorie</ThemedText>
+                <View style={st.catRow}>
+                  <TouchableOpacity
+                    style={[st.catBtn, newProdCategory === 'Légumes' && st.catBtnActive]}
+                    onPress={() => setNewProdCategory('Légumes')}
+                  >
+                    <ThemedText style={[st.catBtnText, newProdCategory === 'Légumes' && st.catBtnTextActive]}>Légumes</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[st.catBtn, newProdCategory === 'Fruits' && st.catBtnActive]}
+                    onPress={() => setNewProdCategory('Fruits')}
+                  >
+                    <ThemedText style={[st.catBtnText, newProdCategory === 'Fruits' && st.catBtnTextActive]}>Fruits</ThemedText>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -692,7 +715,7 @@ const st = StyleSheet.create({
   warningBox:  { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: C.orangeBg, borderLeftWidth: 3, borderLeftColor: C.orange, padding: 10, borderRadius: 8, marginBottom: 12 },
   warningText: { flex: 1, color: C.orange, fontSize: 11, fontWeight: '700' },
 
-  // Product grid (affichage direct sans accordéon)
+  // Product grid
   grid:            { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   prodItem:        { flex: 1, minWidth: '44%', padding: 10, borderRadius: 10, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48 },
   prodItemDefault: { backgroundColor: C.white, borderColor: C.slate200 },
@@ -780,4 +803,11 @@ const st = StyleSheet.create({
   modalCancelText:  { color: C.slate600, fontSize: 14, fontWeight: '700' },
   modalConfirmBtn:  { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: C.navy, borderRadius: 12, padding: 14 },
   modalConfirmText: { color: C.white, fontSize: 14, fontWeight: '800' },
+
+  // Category selector (Modal)
+  catRow:       { flexDirection: 'row', gap: 10 },
+  catBtn:       { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: C.slate200, backgroundColor: C.slate50, alignItems: 'center' },
+  catBtnActive: { backgroundColor: C.navy, borderColor: C.navy },
+  catBtnText:   { fontSize: 13, fontWeight: '700', color: C.slate500 },
+  catBtnTextActive: { color: C.white },
 });

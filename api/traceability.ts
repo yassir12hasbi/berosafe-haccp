@@ -1,8 +1,13 @@
-import client from './client';
+// ─── api/traceability.ts ──────────────────────────────────────────────────────
+import apiClient from './client';
 
-export interface Supplier {
+// ── Types ──
+export interface Product {
   id: number;
   name: string;
+  category_id: number;
+  max_dlc: number;
+  category_name?: string;
 }
 
 export interface Category {
@@ -10,87 +15,144 @@ export interface Category {
   name: string;
 }
 
-export interface Product {
-  id: number;
-  name: string;
-  category_id: number;
-  max_dlc: number | null;
-  category?: Category;
-}
-
 export interface TraceabilityBatch {
   id: number;
   product_id: number;
+  product_name?: string;
   lot_number: string;
   zone: string | null;
-  opened_at: string; // Y-m-d
-  expires_at: string; // Y-m-d
-  closed_at: string | null; // Y-m-d
+  opened_at: string;
+  expires_at: string;
   status: 'active' | 'closed';
-  product?: Product;
+  closed_at: string | null;
+  photo: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface TraceabilityInitialData {
-  categories: Category[];
   products: Product[];
+  categories: Category[];
+  zones: string[];
 }
 
-export interface StoreBatchRequest {
+export interface StoreBatchPayload {
   product_id: number;
   lot_number: string;
   zone?: string | null;
-  opened_at: string; // Y-m-d
+  opened_at: string;
+  photo?: string | null;
 }
 
-export interface UpdateBatchRequest {
-  lot_number: string;
+export interface UpdateBatchPayload {
+  lot_number?: string;
   zone?: string | null;
-  expires_at: string; // Y-m-d
-  status: 'active' | 'closed';
+  expires_at?: string;
+  status?: 'active' | 'closed';
+  photo?: string | null;
 }
 
-const traceabilityApi = {
+// ── API Class ──
+class TraceabilityApi {
   /**
-   * Fetches the initial data for the traceability module (categories, products).
+   * [GET] api/v1/traceability/init-data
+   * Récupère les données initiales (produits, catégories, zones)
    */
-  getInitialData: async (): Promise<TraceabilityInitialData> => {
-    const response = await client.get<TraceabilityInitialData>('/traceability/init-data');
+  async getInitialData(): Promise<TraceabilityInitialData> {
+    const response = await apiClient.get<TraceabilityInitialData>('/traceability/init-data');
     return response.data;
-  },
+  }
 
   /**
-   * Fetches the batches for a specific month and year.
+   * [GET] api/v1/traceability/batches
+   * Récupère les lots pour un mois/année donné
    */
-  getBatches: async (month: number, year: number): Promise<TraceabilityBatch[]> => {
-    const response = await client.get<TraceabilityBatch[]>('/traceability/batches', {
+  async getBatches(month: number, year: number): Promise<TraceabilityBatch[]> {
+    const response = await apiClient.get<TraceabilityBatch[]>('/traceability/batches', {
       params: { month, year }
     });
     return response.data;
-  },
+  }
 
   /**
-   * Stores a new traceability batch.
+   * [POST] api/v1/traceability/store
+   * Crée un nouveau lot
    */
-  storeBatch: async (data: StoreBatchRequest) => {
-    const response = await client.post('/traceability/store', data);
-    return response.data;
-  },
-
-  /**
-   * Updates an existing traceability batch.
-   */
-  updateBatch: async (id: number, data: UpdateBatchRequest) => {
-    const response = await client.put(`/traceability/update/${id}`, data);
-    return response.data;
-  },
-
-  /**
-   * Deletes a traceability batch.
-   */
-  deleteBatch: async (id: number) => {
-    const response = await client.delete(`/traceability/destroy/${id}`);
+  async storeBatch(data: StoreBatchPayload): Promise<TraceabilityBatch> {
+    const response = await apiClient.post<TraceabilityBatch>('/api/v1/traceability/store', data);
     return response.data;
   }
-};
 
-export default traceabilityApi;
+  /**
+   * [POST] api/v1/traceability/store (avec photo en multipart)
+   */
+  async storeBatchWithPhoto(data: StoreBatchPayload, photoUri: string): Promise<TraceabilityBatch> {
+    const formData = new FormData();
+    
+    // Sur React Native, on utilise uri pour le fichier
+    const photoFile = {
+      uri: photoUri,
+      type: 'image/jpeg',
+      name: `lot_photo_${Date.now()}.jpg`,
+    } as any;
+
+    formData.append('photo', photoFile);
+    formData.append('product_id', String(data.product_id));
+    formData.append('lot_number', data.lot_number);
+    if (data.zone) formData.append('zone', data.zone);
+    formData.append('opened_at', data.opened_at);
+
+    const response = await apiClient.post<TraceabilityBatch>('/api/v1/traceability/store', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  /**
+   * [PUT] api/v1/traceability/update/{batch}
+   * Met à jour un lot existant
+   */
+  async updateBatch(batchId: number, data: UpdateBatchPayload): Promise<TraceabilityBatch> {
+    const response = await apiClient.put<TraceabilityBatch>(`/api/v1/traceability/update/${batchId}`, data);
+    return response.data;
+  }
+
+  /**
+   * [PUT] api/v1/traceability/update/{batch} (avec photo en multipart)
+   */
+  async updateBatchWithPhoto(batchId: number, data: UpdateBatchPayload, photoUri: string): Promise<TraceabilityBatch> {
+    const formData = new FormData();
+    
+    const photoFile = {
+      uri: photoUri,
+      type: 'image/jpeg',
+      name: `lot_photo_${Date.now()}.jpg`,
+    } as any;
+
+    formData.append('photo', photoFile);
+    if (data.lot_number) formData.append('lot_number', data.lot_number);
+    if (data.zone) formData.append('zone', data.zone);
+    if (data.expires_at) formData.append('expires_at', data.expires_at);
+    if (data.status) formData.append('status', data.status);
+    formData.append('_method', 'PUT'); // Pour les serveurs qui ne supportent pas PUT avec FormData
+
+    const response = await apiClient.post<TraceabilityBatch>(`/api/v1/traceability/update/${batchId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  /**
+   * [DELETE] api/v1/traceability/destroy/{batch}
+   * Supprime un lot
+   */
+  async deleteBatch(batchId: number): Promise<void> {
+    await apiClient.delete(`/api/v1/traceability/destroy/${batchId}`);
+  }
+}
+
+export default new TraceabilityApi();
