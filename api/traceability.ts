@@ -79,7 +79,7 @@ class TraceabilityApi {
    * Crée un nouveau lot
    */
   async storeBatch(data: StoreBatchPayload): Promise<TraceabilityBatch> {
-    const response = await apiClient.post<TraceabilityBatch>('/api/v1/traceability/store', data);
+    const response = await apiClient.post<TraceabilityBatch>('/traceability/store', data);
     return response.data;
   }
 
@@ -102,7 +102,7 @@ class TraceabilityApi {
     if (data.zone) formData.append('zone', data.zone);
     formData.append('opened_at', data.opened_at);
 
-    const response = await apiClient.post<TraceabilityBatch>('/api/v1/traceability/store', formData, {
+    const response = await apiClient.post<TraceabilityBatch>('/traceability/store', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -115,7 +115,7 @@ class TraceabilityApi {
    * Met à jour un lot existant
    */
   async updateBatch(batchId: number, data: UpdateBatchPayload): Promise<TraceabilityBatch> {
-    const response = await apiClient.put<TraceabilityBatch>(`/api/v1/traceability/update/${batchId}`, data);
+    const response = await apiClient.put<TraceabilityBatch>(`/traceability/update/${batchId}`, data);
     return response.data;
   }
 
@@ -138,7 +138,7 @@ class TraceabilityApi {
     if (data.status) formData.append('status', data.status);
     formData.append('_method', 'PUT'); // Pour les serveurs qui ne supportent pas PUT avec FormData
 
-    const response = await apiClient.post<TraceabilityBatch>(`/api/v1/traceability/update/${batchId}`, formData, {
+    const response = await apiClient.post<TraceabilityBatch>(`/traceability/update/${batchId}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -151,7 +151,7 @@ class TraceabilityApi {
    * Supprime un lot
    */
   async deleteBatch(batchId: number): Promise<void> {
-    await apiClient.delete(`/api/v1/traceability/destroy/${batchId}`);
+    await apiClient.delete(`/traceability/destroy/${batchId}`);
   }
 }
 
